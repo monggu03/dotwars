@@ -1,0 +1,85 @@
+// ─────────────────────────────────────────────────────────────────────
+// dotwars — 동국대학교 축제 픽셀 워 게임 백엔드
+// Gradle Groovy DSL 빌드 스크립트
+//
+// 새 라이브러리/플러그인을 추가할 때는 "왜 필요한지" 한 줄을 옆에 적어두는 걸
+// 규칙으로 함. 나중에 build.gradle만 봐도 시스템이 무엇을 쓰는지 파악되도록.
+// ─────────────────────────────────────────────────────────────────────
+
+plugins {
+	id 'java'
+	// Spring Boot 플러그인: bootRun, bootJar 같은 태스크와 BOM(버전 일괄 관리)을 제공
+	id 'org.springframework.boot' version '3.5.14'
+	// Spring 의존성 버전을 BOM에서 자동으로 맞춰주는 플러그인 (각 starter 버전을 일일이 안 적어도 됨)
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.dongguk'
+version = '0.0.1-SNAPSHOT'
+description = 'Dongguk University Festival Pixel War Game'
+
+java {
+	// Java 21 toolchain — Gradle이 알맞은 JDK를 찾아서 컴파일/실행에 사용
+	// 시스템에 Java 21이 없으면 Gradle이 자동 다운로드 시도. 이미 설치돼 있으므로 안전.
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// ── 웹 / API ──────────────────────────────────────────────────────
+	// REST API 컨트롤러, 내장 톰캣, Jackson(JSON 직렬화) 전부 포함
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// ── 데이터 영속성 ──────────────────────────────────────────────────
+	// JPA + Hibernate. 사용자/단과대/픽셀이력 등 영구 저장이 필요한 데이터 처리용
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	// MySQL JDBC 드라이버. 런타임에만 필요 (컴파일 시점엔 JPA 인터페이스만 알면 됨)
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// ── 캐시 / 실시간 ─────────────────────────────────────────────────
+	// Redis 클라이언트 (Lettuce 기본 내장). 캔버스 현재 상태, 쿨다운, Pub/Sub 채널 운반
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// WebSocket + STOMP. 50x50 캔버스에 픽셀이 칠해지면 모든 접속자에게 실시간 푸시
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	// ── 보안 / 인증 ───────────────────────────────────────────────────
+	// Spring Security. 카카오 OAuth 콜백 처리, 라우트별 인증 필터링에 사용
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// JWT 토큰 발급/검증. 카카오 로그인 후 자체 발급할 액세스 토큰의 표준 포맷
+	// 0.12.x로 고정 — 0.11.x와 API가 크게 다르므로 학습 자료 검색 시 버전 확인 필수
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'        // 런타임에만 필요한 내부 구현
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'     // JSON 직렬화에 Jackson 사용
+
+	// ── 입력 검증 ─────────────────────────────────────────────────────
+	// @Valid, @NotNull 등 Bean Validation. DTO 단계에서 잘못된 입력을 컨트롤러 진입 전에 차단
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// ── 보일러플레이트 제거 ────────────────────────────────────────────
+	// Lombok: @Getter @Builder 등 어노테이션으로 반복 코드 자동 생성
+	// compileOnly + annotationProcessor 짝으로 등록해야 IDE/빌드 양쪽에서 동작
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// ── 테스트 ────────────────────────────────────────────────────────
+	// JUnit5, AssertJ, Mockito, MockMvc 등 테스트에 필요한 도구 일괄 포함
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// Spring Security 컨텍스트를 테스트에서 mock 처리 (@WithMockUser 등)
+	testImplementation 'org.springframework.security:spring-security-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	// JUnit 5 플랫폼 런처 — Gradle 8.x에서 명시적으로 요구
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

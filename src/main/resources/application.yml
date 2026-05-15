@@ -1,0 +1,107 @@
+# ─────────────────────────────────────────────────────────────────────
+# dotwars — Spring Boot 기본 설정
+#
+# 이 파일은 git에 올라감 → "비밀이 아닌" 값만 포함.
+# 카카오 키 / JWT 시크릿 같은 비밀은 application-secret.yml 에서 덮어씀
+# (application-secret.yml은 .gitignore 됨, 형태는 application-secret.yml.example 참고)
+# ─────────────────────────────────────────────────────────────────────
+
+spring:
+  application:
+    name: dotwars
+
+  # 기본 프로파일 — 로컬 개발용. 운영(prod)은 추후 application-prod.yml 추가 예정
+  profiles:
+    active: dev
+
+  # 비밀이 담긴 외부 파일을 "있으면 로드, 없으면 무시"로 임포트.
+  # → 운영 서버에서는 application-secret.yml 없이 환경변수만으로 동작시킬 수 있음
+  config:
+    import: optional:classpath:application-secret.yml
+
+  # ── MySQL 연결 ──────────────────────────────────────────────────────
+  # localhost는 docker-compose의 포트 매핑(3306:3306)을 통해 컨테이너에 도달
+  # serverTimezone=Asia/Seoul 로 JPA <-> DB 시간 변환 일관성 유지
+  datasource:
+    url: jdbc:mysql://localhost:3306/dotwars?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: localpassword     # 로컬 docker-compose 와 일치. 운영은 application-secret 에서 덮어씀
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # ── JPA / Hibernate ─────────────────────────────────────────────────
+  jpa:
+    hibernate:
+      # update: 엔티티 변경 시 테이블 자동 변경. 학습 단계에서 빠른 반복에 유리.
+      #         운영 직전엔 validate 로 바꾸고 마이그레이션 도구(Flyway 등) 도입 권장.
+      ddl-auto: update
+    show-sql: true               # 콘솔에 SQL 출력 — 어떤 쿼리가 실제로 나가는지 학습용으로 중요
+    # OSIV(Open Session In View) 끔.
+    # 기본 true 면 뷰 렌더링 시점까지 DB 커넥션을 들고 있어 트래픽 많을 때 풀 고갈 위험.
+    # REST API 만 제공하므로 false 가 정석. 트랜잭션 경계는 @Transactional 에서 명확히 닫힘.
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true         # SQL을 보기 좋게 줄바꿈/들여쓰기
+        # dialect 는 명시하지 않음 — Hibernate 가 JDBC 드라이버로부터 MySQL 8 을 자동 감지.
+        # 명시하면 deprecation 경고가 뜨며, 버전 업 시 수동 갱신 부담만 늘어남.
+        # JDBC 배치 인서트 활성화 — 픽셀 이력처럼 대량 insert 발생할 때 성능 차이 큼
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  # ── Redis 연결 ──────────────────────────────────────────────────────
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2s               # 명령 응답 대기 한도 — 너무 길면 사용자 응답이 늦어짐
+      lettuce:
+        pool:
+          # 동시 픽셀 칠하기 + 캔버스 broadcast 시 커넥션 풀 부족 방지
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+# ── 카카오 OAuth 설정 ──────────────────────────────────────────────────
+# 실제 client-id/secret은 application-secret.yml 에 정의.
+# 환경변수로도 주입 가능 (운영 EC2에서 권장): KAKAO_CLIENT_ID=...
+kakao:
+  client-id: ${KAKAO_CLIENT_ID:CHANGE_ME}
+  client-secret: ${KAKAO_CLIENT_SECRET:CHANGE_ME}
+  # 카카오 디벨로퍼스에 등록할 콜백 URL — 운영 도메인과 일치시켜야 함
+  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/auth/kakao/callback}
+  # 카카오 인증 서버 엔드포인트 — 카카오 정책 변경 시 여기만 갱신
+  authorization-uri: https://kauth.kakao.com/oauth/authorize
+  token-uri: https://kauth.kakao.com/oauth/token
+  user-info-uri: https://kapi.kakao.com/v2/user/me
+
+# ── JWT 설정 ──────────────────────────────────────────────────────────
+# secret 은 base64 인코딩된 256bit 이상 키. application-secret.yml 에서 주입
+jwt:
+  secret: ${JWT_SECRET:CHANGE_ME_TO_BASE64_256BIT}
+  # 액세스 토큰 만료 — 축제 운영 특성상 짧게 잡고 갱신 (도용 리스크 최소화)
+  access-token-validity-seconds: 3600          # 1시간
+  refresh-token-validity-seconds: 1209600      # 2주
+  issuer: dotwars
+
+# ── 게임 규칙 상수 (DB가 아닌 설정값) ────────────────────────────────────
+# 운영 중 빠른 튜닝이 필요할 수 있는 값들. 컴파일/배포 없이 yml만 바꿔도 반영되도록 분리
+game:
+  canvas:
+    width: 50
+    height: 50
+  cooldown-seconds: 300          # 사용자별 픽셀 쿨다운 (5분)
+
+# ── 서버 ──────────────────────────────────────────────────────────────
+server:
+  port: 8080
+
+# ── 로깅 ──────────────────────────────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    com.dongguk.dotwars: DEBUG   # 우리 코드만 상세 로그 — 외부 라이브러리는 덜 시끄럽게
+    org.hibernate.SQL: DEBUG     # 실제 발사된 SQL 보기
+    # 바인딩된 파라미터까지 보고 싶으면 다음 줄 주석 해제
+    # org.hibernate.orm.jdbc.bind: TRACE

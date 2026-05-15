@@ -1,0 +1,102 @@
+# ─────────────────────────────────────────────────────────────────────
+# dotwars .gitignore
+# - Initializr 기본을 베이스로, Windows + IntelliJ + Docker + secret 파일까지 커버
+# - "추적되면 진짜 곤란한 것" 위주로 정리. 가능한 한 좁게 매칭해 실수로 코드를 가리지 않도록.
+# ─────────────────────────────────────────────────────────────────────
+
+# ── 비밀 파일 (가장 중요) ───────────────────────────────────────────────
+# Spring Boot 실제 시크릿 파일 — application-secret.yml.example 만 git에 올라감
+src/main/resources/application-secret.yml
+src/main/resources/application-secret-*.yml
+
+# 환경변수 파일들 (.env, .env.local, .env.production ...)
+*.env
+.env
+.env.*
+!.env.example          # 템플릿은 추적 OK
+
+# AWS / GCP 자격증명 실수로 떨어진 경우 차단
+*.pem
+*.p12
+*credentials*.json
+!*example*credentials*.json
+
+# ── Gradle / 빌드 산출물 ──────────────────────────────────────────────
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# 컴파일된 클래스 등이 우연히 루트에 떨어지는 경우
+*.class
+
+# ── IntelliJ IDEA ────────────────────────────────────────────────────
+# .idea 전체를 ignore 하는 단순 패턴.
+# (팀 협업 시 일부 파일을 공유하는 패턴도 있지만 개인 학습 프로젝트엔 전체 무시가 안전)
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# ── Eclipse / STS ────────────────────────────────────────────────────
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# ── VS Code ──────────────────────────────────────────────────────────
+.vscode/
+
+# ── Claude Code 세션 로컬 설정 ────────────────────────────────────────
+# 사용자별 권한 허용 목록 등 개인적인 값이 들어감
+.claude/
+
+# ── NetBeans ─────────────────────────────────────────────────────────
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ── 로그 파일 ─────────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+log/
+bootrun.log          # 로컬 검증용으로 사용한 부팅 로그 (재현 가능, 추적 불필요)
+
+# ── OS 임시 파일 ──────────────────────────────────────────────────────
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+# macOS — 윈도우 개발이지만 향후 협업자 대비
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Docker (호스트 볼륨이 폴더로 잡혀있을 때 대비) ───────────────────────
+# 현재 compose 는 named volume 사용 중이라 이 경로는 비어있지만, 향후 변경 가능성 대비
+docker-data/
+.docker/
+
+# ── 임시 / 백업 ───────────────────────────────────────────────────────
+*~
+*.bak
+*.swp
+*.tmp
+.tmp/
+
+# ── Initializr 안내 파일 (이미 삭제했지만 다시 생성 차단) ─────────────────
+HELP.md

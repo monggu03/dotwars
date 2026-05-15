@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────────────
+# dotwars — 로컬 개발용 인프라
+#
+# 이 파일은 "로컬 개발 환경"만 책임짐. 운영(RDS / ElastiCache)에서는 쓰지 않음.
+# 컨테이너를 내려도 데이터가 살아 있도록 named volume을 명시함.
+#
+# 사용법
+#   docker compose up -d          # 백그라운드 기동
+#   docker compose ps             # 컨테이너 상태 / healthy 여부 확인
+#   docker compose logs -f mysql  # 로그 추적
+#   docker compose down           # 컨테이너 정지 + 제거 (볼륨은 유지)
+#   docker compose down -v        # 볼륨까지 제거 (데이터 초기화)
+# ─────────────────────────────────────────────────────────────────────
+
+services:
+  mysql:
+    # 8.0 LTS 라인. 8.4/9.x도 있으나 학습 자료/호환성이 가장 풍부한 8.0으로 고정
+    image: mysql:8.0
+    container_name: dotwars-mysql
+    restart: unless-stopped
+    ports:
+      # 호스트 3306 → 컨테이너 3306. IntelliJ DataGrip 등에서 직접 붙기 위함
+      - "3306:3306"
+    environment:
+      # 로컬 개발용 비밀번호. 운영에서는 절대 이 값을 쓰지 말 것
+      MYSQL_ROOT_PASSWORD: localpassword
+      # 부팅 시 자동 생성될 DB 이름
+      MYSQL_DATABASE: dotwars
+      # 클라이언트 연결 기본 timezone — JPA가 KST 시간을 그대로 저장하도록 통일
+      TZ: Asia/Seoul
+    command:
+      # 이모지/한글 4바이트 문자 안전하게 저장하기 위해 utf8mb4 + 정렬규칙 명시
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # InnoDB 기본 — 트랜잭션/외래키를 쓰기 때문에 명시적으로 못박음
+      - --default-storage-engine=InnoDB
+    volumes:
+      # DB 파일을 호스트의 named volume에 영속화. 컨테이너 재시작/재생성에도 데이터 유지
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Spring Boot가 의존성을 가지고 기동할 때 "DB가 진짜 받을 준비됐는지" 검사
+      # mysqladmin ping은 인증 없이도 "서버 살아있나" 응답을 주므로 헬스체크에 적합
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-plocalpassword"]
+      interval: 5s     # 5초마다 검사
+      timeout: 3s      # 한 번 검사 3초 안에 응답 못 하면 실패로 간주
+      retries: 10      # 10회 연속 실패하면 unhealthy
+      start_period: 30s  # 부팅 직후 30초 동안은 실패해도 unhealthy로 안 침 (초기화 시간 보장)
+
+  redis:
+    # 7-alpine — 7.x 안정 + 경량 이미지. 로컬 개발에서 충분
+    image: redis:7-alpine
+    container_name: dotwars-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command:
+      # AOF(Append Only File) 활성화 — Redis가 종료돼도 최근 쓰기가 남아 캔버스 상태 보존
+      # 운영에서는 ElastiCache가 처리하지만, 로컬에서도 동일 동작을 흉내내기 위함
+      - redis-server
+      - --appendonly
+      - "yes"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      # redis-cli ping → PONG이면 살아있음
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+# named volume 선언. compose가 자동으로 만들어주지만 명시해두면 docker volume ls에서 추적 쉬움
+volumes:
+  mysql-data:
+    name: dotwars-mysql-data
+  redis-data:
+    name: dotwars-redis-data

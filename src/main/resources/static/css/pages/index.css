@@ -1,0 +1,85 @@
+/*
+ * index.css — 메인 페이지(카카오 로그인).
+ *
+ * 레이아웃: 세로 가운데 정렬. 로고/부제/룰 위쪽, 카카오 버튼 하단 1/3 지점(엄지 닿기 좋게).
+ */
+
+.index-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--space-8) var(--space-6);
+    /* 본문(로고/부제/룰) 은 위쪽 1/3, 버튼은 아래쪽 1/3 에 두기 위해 둘 사이에 spacer */
+}
+
+/* ── 본문 (로고 + 부제 + 룰) ────────────────────────────────────── */
+.index-hero {
+    flex: 0 0 auto;
+    padding-top: var(--space-16);
+    text-align: center;
+}
+
+.index-logo {
+    font-family: var(--font-pixel);
+    font-size: var(--text-pixel-lg);
+    font-weight: var(--weight-bold);
+    color: var(--faction-natural);   /* 5진영 중 하나 — 고정 */
+    letter-spacing: 0.04em;
+    /* 그라데이션 X, 그림자 X, 외곽선 X — 정직한 단색 */
+}
+
+.index-subtitle {
+    margin-top: var(--space-3);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+.index-rules {
+    margin-top: var(--space-12);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    text-align: left;
+}
+
+.index-rules li {
+    list-style: none;
+    /* "›" 같은 화살표 대신 4px 작은 정사각형 — 픽셀 미학 */
+    padding-left: var(--space-4);
+    position: relative;
+}
+.index-rules li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 6px;
+    height: 6px;
+    background: var(--text-tertiary);
+}
+
+/* ── 버튼 영역 (하단 1/3) ───────────────────────────────────────── */
+.index-cta {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: var(--space-12);
+}
+
+/* 카카오 로고 SVG는 버튼 안에 inline */
+.kakao-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.index-footer {
+    margin-top: var(--space-6);
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+}

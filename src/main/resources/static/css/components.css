@@ -1,0 +1,213 @@
+/*
+ * components.css — 재사용 컴포넌트 (버튼, 카드, 입력, 배지).
+ * 클래스명만 외우면 페이지별 CSS 에서 추가 스타일 없이 바로 사용 가능.
+ */
+
+/* ─────────────────────────────────────────────────────────────────
+ *  버튼
+ * ───────────────────────────────────────────────────────────────── */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;             /* Apple HIG — 터치 영역 최소 */
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    user-select: none;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+}
+
+/* Primary: 흰 배경 + 검은 텍스트 (게임 시작, 메인 액션) */
+.btn-primary {
+    background: var(--text-primary);
+    color: var(--bg-base);
+    border: none;
+}
+.btn-primary:hover:not(:disabled) {
+    background: var(--text-secondary);
+}
+.btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+}
+.btn-primary:disabled {
+    background: var(--border-default);
+    color: var(--text-tertiary);
+}
+
+/* Secondary: 투명 + 보더 */
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+}
+.btn-secondary:hover:not(:disabled) {
+    border-color: var(--border-strong);
+}
+.btn-secondary:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* 카카오 (예외 — 카카오 가이드라인 의무) */
+.btn-kakao {
+    background: #FEE500;
+    color: #181600;
+    border: none;
+    font-weight: var(--weight-semibold);
+}
+.btn-kakao:hover:not(:disabled) {
+    /* 카카오 가이드: 색 변경 금지. 살짝 어둡게만. */
+    filter: brightness(0.95);
+}
+.btn-kakao:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* full-width — 모바일 풀폭 */
+.btn-block {
+    width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  카드
+ * ───────────────────────────────────────────────────────────────── */
+
+.card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+/*
+ * 진영 색은 "왼쪽 4px 라인" 으로만 표시.
+ * design.md ❌ 9: 카드마다 다른 색 배경 금지. 라인으로만.
+ *
+ * 진영 색은 JS 가 --faction-color CSS 변수로 인라인 주입.
+ *   <div class="card card-faction" style="--faction-color: #FF7F0E"> ...
+ */
+.card-faction {
+    border-left: 4px solid var(--faction-color, var(--border-default));
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  입력 / 체크박스 / 라디오
+ * ───────────────────────────────────────────────────────────────── */
+
+.input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 16px;              /* iOS 자동 줌인 방지 */
+    transition: var(--transition-fast);
+}
+.input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+}
+
+/* 체크박스 라벨: 통째로 큰 터치 영역 */
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    cursor: pointer;
+    min-height: 44px;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+.checkbox-label input[type="checkbox"] {
+    /* 기본 체크박스 그대로 — 시스템 일관성. 단 크기는 살짝 키움 */
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--text-primary);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.checkbox-label input[type="checkbox"]:checked + span {
+    color: var(--text-primary);
+}
+
+/* 라디오 옵션 (단과대 선택용). label 통째로 큰 버튼 역할 */
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+}
+.radio-option:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+}
+.radio-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--faction-color, var(--text-primary));
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.radio-option:has(input[type="radio"]:checked) {
+    /* 선택된 단과대 = 진영색 보더로 강조 (배경은 칠 안 함 — 규칙 #9) */
+    color: var(--text-primary);
+    border-color: var(--faction-color, var(--text-primary));
+    background: var(--bg-elevated);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  진영 배지 (작은 색 표시)
+ * ───────────────────────────────────────────────────────────────── */
+
+.faction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--space-1) var(--space-2);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-pixel);
+    font-size: var(--text-xs);
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
+}
+.faction-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--faction-color, var(--text-secondary));
+    /* 정사각형 = 픽셀 느낌. 둥글지 않게 그대로. */
+    flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  로더 (간단한 텍스트)
+ * ───────────────────────────────────────────────────────────────── */
+
+.loader {
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    text-align: center;
+    padding: var(--space-6);
+}

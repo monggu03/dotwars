@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A0A">
+    <title>단과대 선택 — dotwars</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/select-department.css">
+</head>
+<body>
+<main class="app-container">
+    <section class="select-screen">
+
+        <header class="select-header">
+            <h1 class="select-title">본인 단과대를 선택해주세요</h1>
+            <p class="select-subtitle">한 번 선택하면 변경할 수 없습니다.</p>
+        </header>
+
+        <div class="select-body" id="department-body">
+            <!-- 로딩 텍스트 — JS 가 렌더 시작하면 사라짐 -->
+            <p class="loader">단과대 목록을 불러오는 중...</p>
+        </div>
+
+        <div class="select-body">
+            <div class="agreement-card">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="agreement">
+                    <span>
+                        본인은 동국대학교 재학생이며,
+                        위에서 선택한 단과대가 실제 본인의 소속임을 확인합니다.
+                    </span>
+                </label>
+            </div>
+
+            <!-- 에러 메시지 영역 — JS 가 토글 -->
+            <div class="select-error" id="error" role="alert"></div>
+        </div>
+
+        <footer class="select-footer">
+            <button class="btn btn-primary btn-block" id="submit" disabled>
+                게임 시작
+            </button>
+        </footer>
+
+    </section>
+</main>
+
+<script type="module" src="/js/select-department.js"></script>
+</body>
+</html>

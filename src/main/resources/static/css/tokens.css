@@ -1,0 +1,85 @@
+/*
+ * tokens.css — 모든 디자인 결정의 단일 진실원천 (single source of truth).
+ *
+ * 다른 어떤 CSS 파일도 색/간격/폰트 값을 직접 박지 않음. 반드시 이 변수만 사용.
+ * design.md 의 ❌ "그라데이션 / 무지개색 / 카드마다 다른 색" 같은 함정은
+ * 변수만 쓰면 자동 회피됨 — 정의된 색 안에서만 골라야 하므로.
+ */
+
+:root {
+    /* ── 시스템 배경 ──────────────────────────────────────────────── */
+    --bg-base: #0A0A0A;              /* 페이지 전체 배경 (거의 검정) */
+    --bg-elevated: #141414;          /* 카드/모달 등 한 단계 올라온 표면 */
+    --bg-overlay: rgba(0, 0, 0, 0.85); /* 모달 뒷 오버레이 */
+
+    /* ── 보더 ──────────────────────────────────────────────────────── */
+    --border-default: #2A2A2A;
+    --border-strong: #3D3D3D;        /* 호버/포커스 시 약간 강한 보더 */
+
+    /* ── 텍스트 ────────────────────────────────────────────────────── */
+    --text-primary: #FAFAFA;         /* 본문 */
+    --text-secondary: #A0A0A0;       /* 보조 */
+    --text-tertiary: #606060;        /* 비활성/메타 */
+
+    /* ── 캔버스 (절대 변경 X) ──────────────────────────────────────── */
+    --white-canvas: #FFFFFF;
+
+    /* ── 진영 색 (절대 변경 X, 항상 100% 채도) ──────────────────────── */
+    --faction-humanities: #FF7F0E;   /* 인문진영 — 주황 */
+    --faction-social: #D62728;       /* 사회진영 — 빨강 */
+    --faction-natural: #2CA02C;      /* 자연진영 — 초록 */
+    --faction-engineering: #1F77B4;  /* 공학진영 — 파랑 */
+    --faction-arts: #9467BD;         /* 예술진영 — 보라 */
+
+    /* ── 상태 색 ─────────────────────────────────────────────────── */
+    --status-success: #10B981;       /* 픽셀 칠하기 성공 */
+    --status-warning: #F59E0B;       /* 쿨다운, 곧 마감 */
+    --status-error: #EF4444;         /* 에러, 쿨다운 활성 */
+    --status-info: #3B82F6;          /* 일반 안내 */
+
+    /* ── 폰트 패밀리 ──────────────────────────────────────────────── */
+    /* 본문 — Pretendard CDN (index.html 의 <link> 로 로드) */
+    --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont,
+                 system-ui, 'Apple SD Gothic Neo', sans-serif;
+
+    /* 픽셀 폰트 — OS 기본 우선, 폴백으로 Press Start 2P */
+    --font-pixel: 'DOSGothic', 'DotumChe', 'Press Start 2P', monospace;
+
+    /* ── 폰트 사이즈 ──────────────────────────────────────────────── */
+    --text-xs: 11px;                 /* 메타, caption */
+    --text-sm: 13px;                 /* 보조 텍스트 */
+    --text-base: 15px;               /* 본문 (모바일 16px 권장이라 거의 16) */
+    --text-lg: 18px;                 /* 강조 본문 */
+    --text-xl: 24px;                 /* 섹션 제목 */
+    --text-2xl: 32px;                /* 페이지 제목 */
+    --text-pixel-md: 20px;
+    --text-pixel-lg: 40px;           /* "GAME OVER" 같은 거 */
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    /* ── 간격 (4px 그리드 강제) ────────────────────────────────────── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;                 /* 컴포넌트 기본 패딩 */
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* ── 둥근 모서리 ─────────────────────────────────────────────── */
+    --radius-sm: 2px;                /* 작은 태그/배지 */
+    --radius-md: 4px;                /* 버튼/입력/카드 기본 */
+    --radius-lg: 8px;                /* 모달만 예외적으로 */
+
+    /* ── 그림자 (모달만 사용) ──────────────────────────────────────── */
+    --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.6);
+
+    /* ── 애니메이션 (ease-out 만, 1초 미만) ─────────────────────────── */
+    --transition-fast: 100ms ease-out;
+    --transition-base: 180ms ease-out;
+    --transition-slow: 320ms ease-out;
+}

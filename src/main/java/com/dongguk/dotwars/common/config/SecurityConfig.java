@@ -7,10 +7,12 @@ import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -49,6 +51,14 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 아래 corsConfigurationSource 빈을 자동으로 선택해 CORS 활성
                 .cors(Customizer.withDefaults())
+
+                // 미인증 사용자가 보호된 자원 요청 시: 401 Unauthorized (Spring Security 기본은 403).
+                //  - 401 = "토큰 필요" (REST API 표준)
+                //  - 403 = "권한 부족" (인증은 됐는데 못함)
+                // JWT stateless 환경에선 미인증 = 401 이 의도. AuthenticationEntryPoint 로 명시.
+                .exceptionHandling(eh -> eh.authenticationEntryPoint(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                ))
 
                 .authorizeHttpRequests(auth -> auth
                         // ── 헬스체크 / 인증 흐름 ─────────────────────────────

@@ -1,0 +1,108 @@
+/*
+ * select-department.css — 단과대 선택 페이지.
+ *
+ * 레이아웃:
+ *   ┌──────────────────────┐
+ *   │ 헤더 (sticky 상단)   │
+ *   ├──────────────────────┤
+ *   │ 진영 카드 5개        │  ← 스크롤 영역
+ *   │  ▌인문진영            │
+ *   │   ○ 불교대학          │
+ *   │   ...                │
+ *   │ 약속 체크박스         │
+ *   ├──────────────────────┤
+ *   │ 게임 시작 버튼 (고정) │
+ *   └──────────────────────┘
+ */
+
+.select-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* ── 상단 헤더 ─────────────────────────────────────────────────── */
+.select-header {
+    padding: var(--space-6) var(--space-6) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    position: sticky;
+    top: 0;
+    background: var(--bg-base);
+    z-index: 10;
+}
+.select-title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+}
+.select-subtitle {
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* ── 스크롤 가능한 본문 ────────────────────────────────────────── */
+.select-body {
+    flex: 1 1 auto;
+    padding: var(--space-4) var(--space-4) 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+/* ── 진영 카드 (왼쪽 4px 라인, 안에 단과대 라디오들) ─────────────── */
+.faction-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+.faction-group__header {
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-pixel);
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
+    /* 진영 헤더에도 왼쪽 4px 라인 — 카드 전체를 색칠하는 대신 강조 */
+    border-left: 4px solid var(--faction-color, var(--border-default));
+}
+
+.faction-group__list {
+    display: flex;
+    flex-direction: column;
+    /* 라디오 옵션 자체에 보더가 들어가므로 간격 좁게 */
+    gap: var(--space-1);
+    padding-left: var(--space-3);   /* 진영 헤더 라인과 들여쓰기 정렬 */
+}
+
+/* ── 약속 체크박스 ─────────────────────────────────────────────── */
+.agreement-card {
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-4);
+    /* 둥근 카드 안에 또 둥근 거 X — 그냥 보더만 */
+    border-top: 1px solid var(--border-default);
+    padding-top: var(--space-4);
+}
+
+/* ── 하단 고정 버튼 영역 ──────────────────────────────────────── */
+.select-footer {
+    position: sticky;
+    bottom: 0;
+    padding: var(--space-4) var(--space-6);
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    background: var(--bg-base);
+    border-top: 1px solid var(--border-default);
+}
+
+/* ── 에러 메시지 영역 ─────────────────────────────────────────── */
+.select-error {
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    background: var(--bg-elevated);
+    border-left: 4px solid var(--status-error);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    display: none;   /* JS 가 토글 */
+}
+.select-error.visible {
+    display: block;
+}

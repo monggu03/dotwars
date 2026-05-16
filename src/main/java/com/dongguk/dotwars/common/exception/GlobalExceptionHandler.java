@@ -4,9 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +28,22 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /**
+     * 쿨다운 예외 전용 핸들러 — 일반 BusinessException 보다 먼저 매칭됨 (구체 → 일반).
+     * cooldownRemainingSec 필드를 응답에 포함시키기 위해 본문 형태가 다름.
+     */
+    @ExceptionHandler(CooldownActiveException.class)
+    public ResponseEntity<CooldownErrorResponse> handleCooldown(CooldownActiveException e) {
+        log.info("[business] COOLDOWN_ACTIVE remaining={}s", e.getRemainingSec());
+        return ResponseEntity
+                .status(e.getStatus())
+                .body(new CooldownErrorResponse(
+                        e.getErrorCode(),
+                        e.getMessage(),
+                        e.getRemainingSec()
+                ));
+    }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
@@ -59,6 +78,47 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of("BAD_REQUEST", e.getMessage()));
+    }
+
+    /**
+     * 존재하지 않는 정적 리소스 요청 — 404 가 적절.
+     *
+     * Spring 6 부터 정적 리소스 미발견 시 NoResourceFoundException 을 던지는데,
+     * 우리 catch-all 이 이걸 500 으로 떨어트리면 브라우저의 자동 favicon.ico /
+     * .well-known/* 요청이 매번 ERROR 로그를 남기고 응답도 500. → 404 가 정상.
+     *
+     * 응답 본문은 만들지 않음 (브라우저가 어차피 무시하므로 페이로드 절약).
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResource(NoResourceFoundException e) {
+        // 로그도 안 남김 — 단순 404 는 노이즈. 디버깅 시 access log 로 충분.
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    /**
+     * Content-Type 미스매치 — 415 Unsupported Media Type.
+     *
+     * 흔한 원인: 클라이언트가 JSON body 보내면서 Content-Type 헤더를 빠뜨림 → 기본 text/plain.
+     * Spring 의 @RequestBody 가 JSON 만 받게 등록돼있어 거절. 클라이언트 버그 신호라 400대 응답.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaType(HttpMediaTypeNotSupportedException e) {
+        log.info("[media-type] {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ErrorResponse.of("UNSUPPORTED_MEDIA_TYPE",
+                        "Content-Type 이 지원되지 않습니다. application/json 으로 보내주세요."));
+    }
+
+    /**
+     * 잘못된 HTTP 메서드 (예: POST 만 받는 라우트에 GET) — 405 Method Not Allowed.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethod(HttpRequestMethodNotSupportedException e) {
+        log.info("[method-not-allowed] {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ErrorResponse.of("METHOD_NOT_ALLOWED", e.getMessage()));
     }
 
     /**

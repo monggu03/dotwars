@@ -4,6 +4,7 @@ import com.dongguk.dotwars.department.domain.Department;
 import com.dongguk.dotwars.department.domain.Faction;
 import com.dongguk.dotwars.department.repository.DepartmentRepository;
 import com.dongguk.dotwars.department.repository.FactionRepository;
+import com.dongguk.dotwars.game.canvas.CanvasRedisKeys;
 import com.dongguk.dotwars.game.domain.Game;
 import com.dongguk.dotwars.game.domain.GameSession;
 import com.dongguk.dotwars.game.domain.GameStatus;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,10 +48,18 @@ public class DataInitializer implements ApplicationRunner {
     private final DepartmentRepository departmentRepository;
     private final GameRepository gameRepository;
     private final GameSessionRepository gameSessionRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
-    @Transactional
     public void run(ApplicationArguments args) {
+        // DB 시드와 Redis 시드는 독립 — 트랜잭션 분리. DB 만 @Transactional 메서드로 묶음.
+        seedDatabaseIfEmpty();
+        seedRedisGameStatusIfEmpty();
+    }
+
+    /** DB 시드 — 진영/단과대/게임/세션을 한 트랜잭션으로 일괄 처리. */
+    @Transactional
+    void seedDatabaseIfEmpty() {
         if (factionRepository.count() > 0) {
             log.info("[시드] 이미 존재 → 스킵");
             return;
@@ -66,6 +76,28 @@ public class DataInitializer implements ApplicationRunner {
                 departmentRepository.count(),
                 gameRepository.count(),
                 gameSessionRepository.count());
+    }
+
+    /**
+     * Redis 의 game:status 가 없으면 ACTIVE 로 시드.
+     *
+     * 개발 편의: 부팅 직후 픽셀 칠하기를 바로 테스트하려면 ACTIVE 상태가 필요.
+     * setIfAbsent 사용 — 운영에서는 스케줄러가 16:00 도래 시 ACTIVE 로 전환하지만,
+     * 개발 환경에서 매번 재부팅 후 수동으로 SET 할 필요 없도록 idempotent 하게.
+     *
+     * 운영 단계에서는 이 메서드를 비활성화하거나, 시간 기반 스케줄러로 교체 예정.
+     */
+    void seedRedisGameStatusIfEmpty() {
+        Boolean set = redisTemplate.opsForValue().setIfAbsent(
+                CanvasRedisKeys.GAME_STATUS,
+                GameStatus.ACTIVE.name()
+        );
+        if (Boolean.TRUE.equals(set)) {
+            log.info("[시드] Redis game:status = ACTIVE (신규 설정)");
+        } else {
+            String current = redisTemplate.opsForValue().get(CanvasRedisKeys.GAME_STATUS);
+            log.info("[시드] Redis game:status 이미 존재 = {} → 유지", current);
+        }
     }
 
     /**

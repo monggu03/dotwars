@@ -10,13 +10,16 @@
 
 import { apiGet, apiPost, ApiError } from './api.js';
 import { requireLoginWithDepartment } from './auth-guard.js';
+import { connectWebSocket } from './websocket.js';
 
 // ── 상수 ────────────────────────────────────────────────────────
 const GRID_SIZE = 50;           // 50x50 셀
 const CELL_PX = 10;             // 셀당 캔버스 픽셀 (해상도 500x500)
 const CANVAS_PX = GRID_SIZE * CELL_PX;
 const GRID_STROKE = 'rgba(0, 0, 0, 0.10)';   // 옅은 회색 격자선
-const POLL_INTERVAL_MS = 3000;
+// 통계는 WebSocket 으로 안 보내고 폴링 유지 — 부하 크고 실시간성 덜 중요.
+// 3초 → 5초로 늘림 (WebSocket 으로 picks 즉시 갱신되니까 굳이 짧을 필요 없음).
+const STATS_POLL_MS = 5000;
 const COOLDOWN_TICK_MS = 1000;
 const DOUBLE_TAP_WINDOW_MS = 400;   // 같은 칸 재탭으로 인정하는 시간 창
 
@@ -96,8 +99,30 @@ async function init() {
     setupModalHandlers();
     setupResizeHandler();
 
+    // ── WebSocket 연결 ──────────────────────────────────────────
+    // 캔버스 초기 로드 후 실시간 수신 시작 → 다른 사람이 칠한 픽셀이 1초 이내 화면에 반영.
+    connectWebSocket({
+        onPixelPainted: (msg) => {
+            // 본인이 보낸 페인트의 echo 도 들어옴 (자기 메시지). 같은 색 한 번 더 그리기 = 무해.
+            enqueuePaintedPixel(msg.x, msg.y, msg.factionId);
+        },
+        onGameStatusChanged: (msg) => {
+            // 게임 라이프사이클 전환을 폴링 없이 즉시 반영
+            if (msg.status === 'ENDED') {
+                location.replace('/game-end.html');
+            }
+            // FROZEN/SCHEDULED 시 UI 잠금은 추후 — 현재는 paint API 가 403 으로 막아줌
+        },
+        onReconnected: () => {
+            // 재연결 동안 누락된 픽셀이 있을 수 있으므로 캔버스 다시 받기.
+            // STEP 6 학습 포인트: WebSocket 은 끊겼다 연결되는 순간의 메시지는 잃음 → 보정 필수.
+            console.log('[ws] 재연결 → 캔버스 다시 동기화');
+            loadCanvas();
+        },
+    });
+
     setInterval(tickCooldownDisplay, COOLDOWN_TICK_MS);
-    setInterval(poll, POLL_INTERVAL_MS);
+    setInterval(pollStats, STATS_POLL_MS);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -148,9 +173,34 @@ function fillCell(x, y, color) {
     ctx.fillRect(x * CELL_PX, y * CELL_PX, CELL_PX, CELL_PX);
 }
 
-/** 페인트 1개 + 격자 위에 한 번 더. */
-function drawPaintedPixel(x, y, factionId) {
-    fillCell(x, y, FACTION_COLORS[factionId] || FACTION_COLORS[0]);
+/**
+ * 페인트 1개를 RAF(requestAnimationFrame) 큐에 추가.
+ *
+ * 왜 RAF 묶음 처리인가:
+ *  - WebSocket 으로 초당 수십~수백 메시지가 와도 한 프레임(16ms) 안에 한 번만 그리도록 묶음.
+ *  - 매 메시지마다 fillRect + drawGrid 호출하면 60fps 가 깨지고 화면 버벅임 발생.
+ *  - 큐에 쌓다가 다음 프레임에 한 번에 fillCell 들 + 격자 한 번만 stroke → 60fps 보장.
+ *  - 마감 직전 픽셀 폭주 시나리오 대비 (단일 페이지 다중 클라이언트 broadcast).
+ */
+const paintQueue = [];
+let rafScheduled = false;
+
+function enqueuePaintedPixel(x, y, factionId) {
+    paintQueue.push({ x, y, factionId });
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(flushPaintQueue);
+}
+
+function flushPaintQueue() {
+    rafScheduled = false;
+    if (paintQueue.length === 0) return;
+    // 큐 비우면서 모든 셀 fillRect — 중간에 격자 stroke 안 하고 한 번에 모음
+    while (paintQueue.length > 0) {
+        const p = paintQueue.shift();
+        fillCell(p.x, p.y, FACTION_COLORS[p.factionId] || FACTION_COLORS[0]);
+    }
+    // 격자선은 페인트 후 한 번만 다시 stroke. 큐 처리량 무관하게 1회 비용.
     drawGrid();
 }
 
@@ -262,7 +312,9 @@ function updateCursor(x, y) {
 async function paintPixel(x, y) {
     try {
         const res = await apiPost('/api/game/pixels', { x, y });
-        drawPaintedPixel(res.x, res.y, res.factionId);   // 낙관적 UI
+        // 낙관적 UI — 본인 픽셀은 응답 즉시 화면에 반영. RAF 큐로 들어가 다음 프레임에 그려짐(~16ms).
+        // WebSocket 으로 같은 메시지가 또 와도 같은 색 다시 그리기 = idempotent (무해).
+        enqueuePaintedPixel(res.x, res.y, res.factionId);
         cooldownEndsAt = new Date(res.cooldownEndsAt);
         tickCooldownDisplay();
         loadStats();   // 통계 즉시 갱신
@@ -362,21 +414,22 @@ function tickCooldownDisplay() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  폴링
+//  통계 폴링 (status 는 WebSocket 으로 받음)
 // ─────────────────────────────────────────────────────────────────
 
-async function poll() {
+/**
+ * 진영 통계만 폴링.
+ *
+ * 왜 status 는 WebSocket, stats 는 폴링?
+ *  - status: 전환 빈도 매우 낮음(하루 4-5회), 즉시성 중요 → WebSocket 적합
+ *  - stats:  픽셀마다 바뀌어 메시지 부담 크고, 5초 늦어도 무방 → 폴링 + 1초 캐시 충분
+ */
+async function pollStats() {
     try {
-        const [status, stats] = await Promise.all([
-            apiGet('/api/game/status'),
-            apiGet('/api/stats/factions'),
-        ]);
+        const stats = await apiGet('/api/stats/factions');
         renderStats(stats);
-        if (status.status === 'ENDED') {
-            location.replace('/game-end.html');
-        }
     } catch (e) {
-        console.warn('[poll] 실패', e);
+        console.warn('[poll] stats 실패', e);
     }
 }
 

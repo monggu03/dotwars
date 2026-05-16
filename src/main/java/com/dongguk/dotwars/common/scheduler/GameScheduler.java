@@ -2,8 +2,12 @@ package com.dongguk.dotwars.common.scheduler;
 
 import com.dongguk.dotwars.game.canvas.CanvasRedisKeys;
 import com.dongguk.dotwars.game.domain.GameStatus;
+import com.dongguk.dotwars.game.dto.GameStatusResponse;
 import com.dongguk.dotwars.game.repository.GameSessionRepository;
 import com.dongguk.dotwars.game.service.FinalResultService;
+import com.dongguk.dotwars.game.service.GameStatusService;
+import com.dongguk.dotwars.game.websocket.CanvasBroadcastService;
+import com.dongguk.dotwars.game.websocket.dto.GameStatusChangedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -43,6 +47,8 @@ public class GameScheduler {
     private final RedisTemplate<String, String> redisTemplate;
     private final GameSessionRepository gameSessionRepository;
     private final FinalResultService finalResultService;
+    private final GameStatusService gameStatusService;
+    private final CanvasBroadcastService broadcastService;
 
     /**
      * 매초 tick. fixedRate = 이전 호출 시작으로부터 1000ms 후 다음 호출.
@@ -65,7 +71,18 @@ public class GameScheduler {
                 if (GameStatus.ENDED.name().equals(newStatus)) {
                     finalResultService.calculateAndSaveIfAbsent();
                 }
-                // STEP 6 에서 WebSocket 으로 상태 변경 브로드캐스트 추가 예정.
+
+                // WebSocket 브로드캐스트 — 모든 클라이언트가 즉시 화면 잠금/결과 페이지 전환.
+                // GameStatusService.getStatus() 가 Redis 의 방금 갱신된 status + DB 의 현재/다음 세션
+                // 정보를 한 번에 가져와 응답 DTO 와 동일 형태로 반환. 그걸 그대로 메시지로.
+                GameStatusResponse snapshot = gameStatusService.getStatus();
+                broadcastService.broadcastGameStatusChanged(
+                        GameStatusChangedMessage.of(
+                                snapshot.status(),
+                                snapshot.currentSession(),
+                                snapshot.nextSession()
+                        )
+                );
             }
         } catch (Exception e) {
             // 매초 호출되는 메서드라 예외 폭주 위험 → swallow + 로그.

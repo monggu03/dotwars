@@ -3,6 +3,7 @@ package com.dongguk.dotwars.game.canvas;
 import com.dongguk.dotwars.common.exception.CooldownActiveException;
 import com.dongguk.dotwars.common.exception.GameNotActiveException;
 import com.dongguk.dotwars.common.exception.UserNotFoundException;
+import com.dongguk.dotwars.game.websocket.CanvasBroadcastService;
 import com.dongguk.dotwars.user.domain.User;
 import com.dongguk.dotwars.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class CanvasService {
     private final RedisTemplate<String, String> redisTemplate;
     private final UserRepository userRepository;
     private final PixelHistoryAsyncService historyAsyncService;
+    private final CanvasBroadcastService broadcastService;
 
     // 쿨다운 초. application.yml 의 game.cooldown-seconds 와 일치 (운영 중 yml 만 바꿔도 반영)
     @Value("${game.cooldown-seconds:300}")
@@ -160,6 +162,12 @@ public class CanvasService {
             // ── 7) 비동기 픽셀 이력 저장 ───────────────────────────
             // 별도 스레드에서 INSERT — 응답 지연 0. 큐 가득 차거나 DB 실패해도 사용자 응답 영향 없음.
             historyAsyncService.save(userId, x, y, factionId);
+
+            // ── 8) WebSocket 브로드캐스트 ─────────────────────────
+            // 모든 구독자(/topic/canvas) 에게 즉시 알림. SimpMessagingTemplate.convertAndSend 는
+            // 메모리 큐 push 라 빠름 → 동기 호출이어도 응답 지연 미미.
+            // 부하 테스트에서 병목이면 그 때 비동기 도입 검토.
+            broadcastService.broadcastPixelPainted(x, y, factionId);
 
             Instant cooldownEndsAt = Instant.now().plusSeconds(cooldownSeconds);
             log.debug("[paint] user={} ({},{}) {} -> {} ", userId, x, y, prevFactionId, factionId);

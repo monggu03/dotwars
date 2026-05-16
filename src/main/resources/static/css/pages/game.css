@@ -28,8 +28,13 @@ body {
 .minibar {
     position: fixed;
     top: 0;
-    left: 0;
-    right: 0;
+    /* 480px 컬럼 안에서 가운데 정렬 — 다른 페이지(index/select/game-end) 의 .app-container 와 일치.
+       fixed 요소는 margin: auto 가 안 먹어 left:50% + translateX(-50%) 패턴 사용. */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+
     padding-top: calc(var(--space-2) + env(safe-area-inset-top));
     padding-bottom: var(--space-2);
     padding-left: calc(var(--space-3) + env(safe-area-inset-left));
@@ -91,9 +96,17 @@ body {
 
 .canvas-stage {
     position: fixed;
-    inset: 0;
+    top: 0;
+    bottom: 0;
+    /* 480px 컬럼 안 정렬. inset:0 대신 left:50% + translateX 패턴.
+       다른 페이지의 .app-container 와 같은 폭. 데스크탑에선 양 옆 검정. */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+
     background: var(--bg-base);
-    /* flex 가운데 정렬 — wrapper 가 화면 정중앙. window resize 시에도 안정. */
+    /* flex 가운데 정렬 — wrapper 가 stage 정중앙. */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -104,12 +117,13 @@ body {
 
 .canvas-wrapper {
     /*
-     * 정사각형 + 가로 풀폭 우선.
-     * portrait 모바일: width = min(95vw, 95vh) → 화면 좁은 쪽 95%.
-     * 이전 90vmin 대비 살짝 더 크게. min() 으로 가로/세로 풀폭 동시 보호.
+     * stage 의 95% 정사각형. stage 가 max-width 480px 이므로 wrapper 는 max 456px.
+     * 모바일(395px): wrapper ≈ 375px. 데스크탑(stage 480px 한정): wrapper 456px.
+     * aspect-ratio: 1/1 로 정사각형 보장 → height 별도 지정 불필요.
      */
-    width: min(95vw, 95vh);
-    height: min(95vw, 95vh);
+    width: 95%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1;
     background: var(--white-canvas);
     /* 캔버스 가장자리 살짝 강조 — 검정 OS 와 흰 캔버스 경계 */
     border: 1px solid var(--border-strong);

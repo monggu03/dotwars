@@ -32,4 +32,15 @@ public interface GameSessionRepository extends JpaRepository<GameSession, Long> 
             WHERE s.startsAt <= :now AND s.endsAt > :now
             """)
     Optional<GameSession> findCurrentSession(@Param("now") LocalDateTime now);
+
+    /**
+     * 미래에 가장 가까운 세션 (현재 시각 이후 starts_at, 가장 빠른 것 1건).
+     *
+     * 메서드 이름 파생:
+     *   findFirst[By필드 + 조건][OrderBy필드 + 방향]
+     *   → SELECT * FROM game_sessions WHERE starts_at > :now ORDER BY starts_at ASC LIMIT 1
+     *
+     * 용도: FROZEN/SCHEDULED 상태일 때 클라이언트에 "다음 시작 시각" 안내.
+     */
+    Optional<GameSession> findFirstByStartsAtAfterOrderByStartsAtAsc(LocalDateTime now);
 }

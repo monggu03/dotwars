@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0A0A0A">
-    <title>게임 — dotwars</title>
+    <title>dotwars</title>
 
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -20,34 +20,80 @@
     <link rel="stylesheet" href="/css/pages/game.css">
 </head>
 <body>
-<main class="app-container">
-    <section class="game-screen">
 
-        <div class="game-status">
-            <h1 class="game-status__title">곧 게임이 시작됩니다</h1>
-            <p class="game-status__message">2026년 5월 17일 16:00 부터 픽셀을 칠할 수 있습니다.</p>
+<!-- ── 상단 미니바 ───────────────────────────────────────────────── -->
+<header class="minibar">
+    <div class="minibar__left">
+        <span class="faction-color-dot" id="my-faction-dot" aria-hidden="true"></span>
+        <span class="font-pixel" id="my-faction-name">--</span>
+        <span class="minibar__rank font-pixel" id="my-rank">--위</span>
+    </div>
+    <div class="minibar__right">
+        <span class="cooldown-timer font-pixel" id="cooldown-timer">--:--</span>
+    </div>
+</header>
 
-            <div class="game-identity" id="identity">
-                <div class="game-identity__row">
-                    <div class="game-identity__label">소속 단과대</div>
-                    <div class="game-identity__value" id="dept-name">—</div>
-                </div>
-                <div class="game-identity__row">
-                    <div class="game-identity__label">소속 진영</div>
-                    <div class="game-identity__value" id="faction-name">—</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="game-actions">
-            <button class="btn btn-secondary btn-block" id="logout">
-                로그아웃
-            </button>
-        </div>
-
-    </section>
+<!-- ── 캔버스 영역 ────────────────────────────────────────────────── -->
+<!--
+  canvas 해상도 = 500x500 (50 픽셀 × 10 px/cell).
+  각 픽셀은 10x10 으로 그려지고, 매 그림 후 1px 격자선이 위에 stroke 됨 → r/place 식 그리드.
+  image-rendering: pixelated 로 어떤 줌 배율에서도 또렷한 정사각형 유지.
+-->
+<main class="canvas-stage" id="canvas-stage">
+    <div class="canvas-wrapper" id="canvas-wrapper">
+        <canvas id="game-canvas" width="500" height="500"
+                aria-label="50x50 픽셀 캔버스"></canvas>
+        <!--
+          픽셀 커서 — 사용자가 1탭 선택한 칸을 강조하는 overlay.
+          wrapper 안에 absolute 배치되어 panzoom 의 transform 따라 함께 변환.
+          width/height 는 cell 1개 크기 (2%) → CSS 계산.
+        -->
+        <div class="pixel-cursor" id="pixel-cursor" aria-hidden="true"></div>
+    </div>
 </main>
 
+<!-- ── 우측 하단 플로팅 버튼 (전체 순위 모달 열기) ─────────────────── -->
+<button class="fab" id="open-stats" type="button">순위</button>
+
+<!--
+  ── 하단 좌표 바 ─────────────────────────────────────────────────
+  사용자가 픽셀 1탭 선택 시 화면 하단에서 슬라이드업.
+  - 좌표 (x,y) 표시
+  - "다시 누르면 칠해져요" 안내
+  - 우측 ×: 선택 해제
+-->
+<div class="coord-bar hidden" id="coord-bar" role="status">
+    <div class="coord-bar__main">
+        <span class="coord-bar__label">선택</span>
+        <span class="coord-bar__value font-pixel" id="coord-value">(--,--)</span>
+    </div>
+    <span class="coord-bar__hint">다시 누르면 칠해집니다</span>
+    <button class="coord-bar__cancel" id="cancel-select" type="button" aria-label="선택 취소">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6L18 18 M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="square" fill="none"/>
+        </svg>
+    </button>
+</div>
+
+<!-- ── 전체 순위 모달 ────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="stats-modal" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2 id="stats-title" class="font-pixel">진영 순위</h2>
+            <button class="modal-close" id="close-stats" type="button" aria-label="닫기">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6L18 18 M18 6L6 18" stroke-linecap="square"/>
+                </svg>
+            </button>
+        </header>
+        <div class="modal-body">
+            <ul class="stats-list" id="stats-list"></ul>
+            <p class="stats-meta" id="stats-meta"></p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 <script type="module" src="/js/game.js"></script>
 </body>
 </html>

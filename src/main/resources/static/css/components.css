@@ -211,3 +211,168 @@
     text-align: center;
     padding: var(--space-6);
 }
+
+/* ─────────────────────────────────────────────────────────────────
+ *  Toast (일시 알림 — 쿨다운 안내, 네트워크 에러 등)
+ *
+ *  - 화면 하단 가운데에 살짝 떴다가 2.5초 후 사라짐
+ *  - JS 가 .toast 노드 동적 생성 후 setTimeout 으로 제거
+ *  - 둥근 모서리 4px, 어두운 배경 + 1px 보더 (그림자 없음)
+ * ───────────────────────────────────────────────────────────────── */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--space-12) + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    max-width: calc(100vw - var(--space-8));
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    z-index: 1000;
+    animation: toast-in var(--transition-base);
+    /* 클릭 통과 — 토스트가 사용자 액션을 막지 않게 */
+    pointer-events: none;
+}
+@keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  모달 (전체 순위, 픽셀 확대 시트 공통 베이스)
+ *
+ *  design.md 의 모달 가이드 그대로:
+ *  - 오버레이는 var(--bg-overlay) 어두운 반투명
+ *  - content 는 8px radius (모달만 예외)
+ *  - 그림자 var(--shadow-modal) (유일하게 허용)
+ * ───────────────────────────────────────────────────────────────── */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;     /* 모바일 친화: 하단에서 슬라이드업 */
+    justify-content: center;
+    /* 모바일에서 풀폭, 데스크탑에서 480px 컨테이너 안에 정렬되도록 */
+    padding: 0;
+}
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;  /* 위쪽만 둥글게 — 하단 시트 느낌 */
+    box-shadow: var(--shadow-modal);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: sheet-up var(--transition-slow);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+@keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--border-default);
+}
+.modal-header h2 {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+}
+
+.modal-close {
+    /* SVG × 아이콘 버튼 — 이모지 사용 X (design.md #3) */
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.modal-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-base);
+}
+.modal-close svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--space-4) var(--space-6);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  플로팅 액션 버튼 (FAB)
+ *
+ *  - 우측 하단 고정
+ *  - 둥근 사각형(8px radius) — 완전 원형 X (픽셀 미학)
+ *  - 텍스트 라벨 사용 (이모지 X)
+ * ───────────────────────────────────────────────────────────────── */
+
+.fab {
+    position: fixed;
+    right: var(--space-4);
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    min-width: 56px;
+    min-height: 56px;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-family: var(--font-pixel);
+    font-size: var(--text-xs);
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    z-index: 50;
+    box-shadow: var(--shadow-modal);
+    transition: var(--transition-fast);
+}
+.fab:hover {
+    border-color: var(--text-primary);
+}
+.fab:active {
+    transform: translateY(1px);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  텍스트 유틸 — 픽셀 폰트
+ * ───────────────────────────────────────────────────────────────── */
+
+.font-pixel {
+    font-family: var(--font-pixel);
+    letter-spacing: 0.02em;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  공통 hidden — display: none 보장
+ * ───────────────────────────────────────────────────────────────── */
+.hidden { display: none !important; }

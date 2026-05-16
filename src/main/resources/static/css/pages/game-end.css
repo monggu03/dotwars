@@ -1,0 +1,114 @@
+/*
+ * game-end.css — 게임 종료 화면 (placeholder).
+ *
+ * 레이아웃:
+ *   ┌────────────────────┐
+ *   │   GAME OVER         │   ← 큰 픽셀 폰트
+ *   │                     │
+ *   │   우승: 공학진영     │   ← 진영색 표시
+ *   │                     │
+ *   │   진영별 최종 순위   │
+ *   │   1위 공학  41.2%   │
+ *   │   2위 사회  22.5%   │
+ *   │   ...               │
+ *   └────────────────────┘
+ *
+ * STEP 7 (운영 마감) 에서 최종 캔버스 이미지/공유 버튼 등 풍부하게 만들 예정.
+ */
+
+.end-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--space-12) var(--space-6);
+    align-items: stretch;
+}
+
+.end-title {
+    font-family: var(--font-pixel);
+    font-size: var(--text-pixel-lg);
+    font-weight: var(--weight-bold);
+    text-align: center;
+    color: var(--text-primary);
+    letter-spacing: 0.06em;
+    margin-bottom: var(--space-8);
+}
+
+.end-winner {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--faction-color, var(--text-primary));
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    margin-bottom: var(--space-8);
+    text-align: center;
+}
+.end-winner__label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    letter-spacing: 0.1em;
+    margin-bottom: var(--space-2);
+}
+.end-winner__name {
+    font-family: var(--font-pixel);
+    font-size: var(--text-pixel-md);
+    color: var(--faction-color, var(--text-primary));
+    letter-spacing: 0.04em;
+}
+.end-winner__pct {
+    margin-top: var(--space-2);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+.end-ranking-title {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-3);
+}
+
+.end-ranking {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.end-ranking__row {
+    display: grid;
+    grid-template-columns: 32px 12px 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--row-color, var(--border-default));
+    border-radius: var(--radius-md);
+}
+.end-ranking__rank {
+    font-family: var(--font-pixel);
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    letter-spacing: 0.05em;
+}
+.end-ranking__dot {
+    width: 12px;
+    height: 12px;
+    background: var(--row-color, var(--text-secondary));
+}
+.end-ranking__name {
+    color: var(--text-primary);
+    font-size: var(--text-base);
+}
+.end-ranking__pct {
+    font-family: var(--font-pixel);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    letter-spacing: 0.05em;
+}
+
+.end-actions {
+    margin-top: var(--space-8);
+}

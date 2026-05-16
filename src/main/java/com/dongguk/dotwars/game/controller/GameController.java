@@ -4,8 +4,10 @@ import com.dongguk.dotwars.game.canvas.CanvasService;
 import com.dongguk.dotwars.game.canvas.PixelPaintResult;
 import com.dongguk.dotwars.game.dto.CanvasResponse;
 import com.dongguk.dotwars.game.dto.CooldownResponse;
+import com.dongguk.dotwars.game.dto.GameStatusResponse;
 import com.dongguk.dotwars.game.dto.PaintPixelRequest;
 import com.dongguk.dotwars.game.dto.PaintPixelResponse;
+import com.dongguk.dotwars.game.service.GameStatusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,6 +37,16 @@ import java.time.Instant;
 public class GameController {
 
     private final CanvasService canvasService;
+    private final GameStatusService gameStatusService;
+
+    /**
+     * GET /api/game/status — 게임 라이프사이클 상태 + 현재/다음 세션 + 서버 시각.
+     * 공개 라우트. 클라이언트는 이걸로 ACTIVE/FROZEN/SCHEDULED/ENDED 분기.
+     */
+    @GetMapping("/status")
+    public GameStatusResponse status() {
+        return gameStatusService.getStatus();
+    }
 
     /**
      * GET /api/game/canvas — 캔버스 전체 상태.

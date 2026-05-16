@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A0A">
+    <title>GAME OVER — dotwars</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/game-end.css">
+</head>
+<body>
+<main class="app-container">
+    <section class="end-screen">
+        <h1 class="end-title">GAME OVER</h1>
+
+        <div class="end-winner" id="winner">
+            <div class="end-winner__label">우승 진영</div>
+            <div class="end-winner__name" id="winner-name">—</div>
+            <div class="end-winner__pct" id="winner-pct">—</div>
+        </div>
+
+        <p class="end-ranking-title">진영별 최종 순위</p>
+        <ul class="end-ranking" id="ranking"></ul>
+
+        <div class="end-actions">
+            <button class="btn btn-secondary btn-block" id="back-home">처음으로</button>
+        </div>
+    </section>
+</main>
+
+<script type="module" src="/js/game-end.js"></script>
+</body>
+</html>

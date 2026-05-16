@@ -1,69 +1,289 @@
 /*
- * game.css — placeholder.
- * 다음 step 에서 풀스크린 캔버스로 교체될 예정. 지금은 본인 진영 정보 표시.
+ * game.css — 풀스크린 캔버스 게임 화면 (r/place 스타일).
+ *
+ * 변경 (2026-05-16):
+ *  - 확대 시트 제거. 캔버스 위 pixel-cursor + 하단 coord-bar 로 변경.
+ *  - 1탭 선택 → 같은 칸 재탭(400ms 이내) 페인트 인터랙션.
+ *  - canvas 해상도 500x500 + 매 paint 후 격자선 stroke → r/place 식 그리드.
+ *
+ * 레이아웃:
+ *   ┌────────────────────────────────┐
+ *   │ minibar (sticky, blur)         │
+ *   ├────────────────────────────────┤
+ *   │                                │
+ *   │      canvas (정중앙, 정사각)    │
+ *   │                                │
+ *   ├────────────────────────────────┤
+ *   │ coord-bar (선택 시에만 표시)   │
+ *   │                          [순위]│
+ *   └────────────────────────────────┘
  */
 
-.game-screen {
+body {
+    background: var(--bg-base);
+}
+
+/* ── 미니바 ────────────────────────────────────────────────────── */
+
+.minibar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
+    padding-bottom: var(--space-2);
+    padding-left: calc(var(--space-3) + env(safe-area-inset-left));
+    padding-right: calc(var(--space-3) + env(safe-area-inset-right));
+
+    background: rgba(10, 10, 10, 0.78);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-default);
+
     display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: var(--space-12) var(--space-6);
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+
+    color: var(--text-primary);
+    font-size: var(--text-xs);
+    z-index: 10;
+}
+
+.minibar__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.minibar__right {
+    display: flex;
+    align-items: center;
+}
+
+/* 진영 색 점 — 12x12 정사각형 (둥글지 않음, 픽셀 미학) */
+.faction-color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.minibar__rank {
+    margin-left: var(--space-2);
+    color: var(--text-secondary);
+}
+
+.cooldown-timer {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+}
+.cooldown-timer.ready {
+    color: var(--status-success);
+}
+.cooldown-timer.active {
+    color: var(--status-warning);
+}
+
+/* ── 캔버스 영역 ──────────────────────────────────────────────── */
+
+.canvas-stage {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-base);
+    /* flex 가운데 정렬 — wrapper 가 화면 정중앙. window resize 시에도 안정. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    /* panzoom 이 touch 제스처 직접 처리 — 브라우저 기본 스크롤/줌과 충돌 회피 */
+    touch-action: none;
+}
+
+.canvas-wrapper {
+    /*
+     * 정사각형 + 가로 풀폭 우선.
+     * portrait 모바일: width = min(95vw, 95vh) → 화면 좁은 쪽 95%.
+     * 이전 90vmin 대비 살짝 더 크게. min() 으로 가로/세로 풀폭 동시 보호.
+     */
+    width: min(95vw, 95vh);
+    height: min(95vw, 95vh);
+    background: var(--white-canvas);
+    /* 캔버스 가장자리 살짝 강조 — 검정 OS 와 흰 캔버스 경계 */
+    border: 1px solid var(--border-strong);
+    position: relative;   /* pixel-cursor absolute 배치 기준 */
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* 픽셀 또렷하게 — 줌 배율 무관 */
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ── 픽셀 커서 (1탭 선택 표시) ─────────────────────────────────── */
+/*
+ * 사용자가 선택한 1칸을 캔버스 위에서 강조.
+ * wrapper 의 2% × 2% = 1 cell. 가시성 위해 outline (보더 안쪽으로) + 작은 그림자 효과 없음(미니멀).
+ * pointer-events: none — 클릭이 캔버스로 통과되도록.
+ */
+.pixel-cursor {
+    position: absolute;
+    width: 2%;
+    height: 2%;
+    /* 검은 외곽 + 흰색 안쪽 — 어느 진영색 위에서도 잘 보이는 대비 */
+    outline: 2px solid var(--bg-base);
+    box-shadow: inset 0 0 0 1px var(--text-primary);
+    pointer-events: none;
+    display: none;
+    transition: left var(--transition-fast), top var(--transition-fast);
+    z-index: 5;
+}
+.pixel-cursor.visible {
+    display: block;
+    /* 1초마다 박동 — 사용자에게 "선택됨" 명확히 */
+    animation: cursor-pulse 1s ease-in-out infinite;
+}
+@keyframes cursor-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+
+/* ── 하단 좌표 바 (선택 시 표시) ───────────────────────────────── */
+/*
+ * 미니바와 짝을 이루는 하단 바. 좌표 + 안내문 + 취소 버튼.
+ * fixed 라 캔버스 panzoom 변환과 무관하게 화면 하단 고정.
+ */
+.coord-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* FAB 위쪽으로 살짝 띄움 */
+    bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+    margin: 0 auto;
+    max-width: 480px;
+
+    padding: var(--space-3) var(--space-4);
+    background: rgba(20, 20, 20, 0.92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    z-index: 20;
+    animation: coord-bar-in var(--transition-base);
+}
+@keyframes coord-bar-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.coord-bar__main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+.coord-bar__label {
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+}
+.coord-bar__value {
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    letter-spacing: 0.05em;
+}
+.coord-bar__hint {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    flex: 1 1 auto;
     text-align: center;
 }
-
-.game-status {
-    flex: 0 0 auto;
-    padding-top: var(--space-12);
-}
-
-.game-status__title {
-    font-family: var(--font-pixel);
-    font-size: var(--text-pixel-md);
-    color: var(--text-primary);
-    letter-spacing: 0.04em;
-    margin-bottom: var(--space-3);
-}
-
-.game-status__message {
-    font-size: var(--text-base);
+.coord-bar__cancel {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
     color: var(--text-secondary);
-    margin-bottom: var(--space-8);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.coord-bar__cancel:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+}
+.coord-bar__cancel svg {
+    width: 14px;
+    height: 14px;
 }
 
-/* 본인 진영/단과대 정보 카드 — 진영색 왼쪽 라인만 */
-.game-identity {
+/* ── 전체 순위 모달의 통계 리스트 ─────────────────────────────── */
+
+.stats-list {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    text-align: left;
-    background: var(--bg-elevated);
+    gap: var(--space-2);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.stat-item {
+    display: grid;
+    grid-template-columns: 12px 1fr auto auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--bg-base);
     border: 1px solid var(--border-default);
     border-left: 4px solid var(--faction-color, var(--border-default));
     border-radius: var(--radius-md);
-    padding: var(--space-4);
-    margin-top: var(--space-6);
 }
-
-.game-identity__label {
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
-    margin-bottom: var(--space-1);
+.stat-item__dot {
+    width: 12px;
+    height: 12px;
+    background: var(--faction-color, var(--text-secondary));
 }
-.game-identity__value {
-    font-size: var(--text-lg);
+.stat-item__name {
     color: var(--text-primary);
-    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
 }
-.game-identity__row + .game-identity__row {
-    margin-top: var(--space-3);
+.stat-item__rank {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    letter-spacing: 0.05em;
+}
+.stat-item__pct {
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    letter-spacing: 0.05em;
+    text-align: right;
+    min-width: 56px;
+}
+.stat-item.is-mine {
+    border-color: var(--text-primary);
 }
 
-/* 로그아웃 버튼은 화면 하단에 secondary 로 */
-.game-actions {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding-bottom: var(--space-8);
+.stats-meta {
+    margin-top: var(--space-4);
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+    text-align: center;
 }

@@ -80,10 +80,18 @@ kakao:
 # secret 은 base64 인코딩된 256bit 이상 키. application-secret.yml 에서 주입
 jwt:
   secret: ${JWT_SECRET:CHANGE_ME_TO_BASE64_256BIT}
-  # 액세스 토큰 만료 — 축제 운영 특성상 짧게 잡고 갱신 (도용 리스크 최소화)
-  access-token-validity-seconds: 3600          # 1시간
-  refresh-token-validity-seconds: 1209600      # 2주
+  # 액세스 토큰 만료 7일 (604800초).
+  # 축제 3일 운영 동안 학생이 한 번 로그인하면 만료 없이 사용 → refresh token 흐름 불필요.
+  # 만료 짧게(예: 1시간) 잡으면 refresh 메커니즘이 필수가 되어 코드 복잡도가 증가.
+  access-token-validity-seconds: 604800
   issuer: dotwars
+
+# ── 인증 쿠키 설정 ────────────────────────────────────────────────────
+auth:
+  cookie:
+    # localhost HTTP 개발 환경에서는 false. 운영(HTTPS)에서는 반드시 true 로 바꿔야 함.
+    # Secure=true 인 쿠키는 HTTPS 연결에서만 전송되므로 평문 도청 방지.
+    secure: false
 
 # ── 게임 규칙 상수 (DB가 아닌 설정값) ────────────────────────────────────
 # 운영 중 빠른 튜닝이 필요할 수 있는 값들. 컴파일/배포 없이 yml만 바꿔도 반영되도록 분리

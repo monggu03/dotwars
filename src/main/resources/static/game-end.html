@@ -22,20 +22,62 @@
 <body>
 <main class="app-container">
     <section class="end-screen">
-        <h1 class="end-title">GAME OVER</h1>
 
-        <div class="end-winner" id="winner">
-            <div class="end-winner__label">우승 진영</div>
-            <div class="end-winner__name" id="winner-name">—</div>
-            <div class="end-winner__pct" id="winner-pct">—</div>
+        <!-- ── GAME OVER 헤더 ───────────────────────────────────── -->
+        <header class="end-header">
+            <h1 class="end-title">GAME OVER</h1>
+            <p class="end-subtitle">3일간 수고하셨습니다</p>
+        </header>
+
+        <!-- ── 최종 캔버스 이미지 ────────────────────────────────── -->
+        <!--
+          게임이 끝난 시점의 캔버스 스냅샷. 진영색이 칠해진 50x50 픽셀.
+          격자선 포함. canvas.toDataURL() 로 PNG 저장 가능.
+        -->
+        <figure class="end-canvas-wrap">
+            <canvas id="end-canvas" width="500" height="500"
+                    aria-label="최종 캔버스 상태"></canvas>
+            <figcaption class="end-canvas-caption" id="canvas-caption">
+                — 로딩 중 —
+            </figcaption>
+        </figure>
+
+        <!-- ── 우승 진영 카드 (가장 큰 시각 강조) ─────────────────── -->
+        <div class="winner-card" id="winner">
+            <div class="winner-card__label">우승 진영</div>
+            <div class="winner-card__name" id="winner-name">—</div>
+            <div class="winner-card__stat">
+                <span id="winner-pct">—</span>
+                <span class="winner-card__sep">·</span>
+                <span id="winner-pixels">—</span>
+            </div>
         </div>
 
-        <p class="end-ranking-title">진영별 최종 순위</p>
-        <ul class="end-ranking" id="ranking"></ul>
+        <!-- ── 본인 진영 결과 (로그인 사용자만) ──────────────────── -->
+        <div class="my-card hidden" id="my-card">
+            <div class="my-card__label">내 진영</div>
+            <div class="my-card__row">
+                <span class="my-card__name" id="my-faction-name">—</span>
+                <span class="my-card__rank font-pixel" id="my-rank">—</span>
+            </div>
+        </div>
 
+        <!-- ── 진영별 최종 순위 ─────────────────────────────────── -->
+        <section class="end-ranking-section">
+            <h2 class="end-ranking-title">진영별 최종 순위</h2>
+            <ol class="end-ranking" id="ranking"></ol>
+        </section>
+
+        <!-- ── 액션 버튼 ──────────────────────────────────────── -->
         <div class="end-actions">
-            <button class="btn btn-secondary btn-block" id="back-home">처음으로</button>
+            <button class="btn btn-secondary btn-block" id="download-canvas">
+                캔버스 이미지 저장
+            </button>
+            <button class="btn btn-secondary btn-block" id="back-home">
+                처음으로
+            </button>
         </div>
+
     </section>
 </main>
 

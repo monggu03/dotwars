@@ -52,6 +52,9 @@ const els = {
     closeStats: $('close-stats'),
     statsList: $('stats-list'),
     statsMeta: $('stats-meta'),
+    banner: $('game-banner'),
+    bannerLabel: $('banner-label'),
+    bannerCountdown: $('banner-countdown'),
 };
 
 // ── 모듈 상태 ────────────────────────────────────────────────────
@@ -63,6 +66,8 @@ let cooldownEndsAt = null;
 let lastTap = { x: -1, y: -1, time: 0 };
 // 현재 선택된 칸 (1탭으로 선택, 페인트하거나 다른 칸 클릭하거나 취소까지 유지)
 let selected = null;   // { x, y } | null
+// 휴식 배너의 카운트다운 목표 시각. ACTIVE 상태에선 null.
+let bannerNextStartsAt = null;
 
 init().catch((e) => console.error('[game] 초기화 실패', e));
 
@@ -87,6 +92,8 @@ async function init() {
         location.replace('/game-end.html');
         return;
     }
+    // FROZEN/SCHEDULED 면 휴식 배너 노출. ACTIVE 면 hidden 유지.
+    updateBanner(status);
 
     await Promise.all([
         loadCanvas(),
@@ -110,8 +117,13 @@ async function init() {
             // 게임 라이프사이클 전환을 폴링 없이 즉시 반영
             if (msg.status === 'ENDED') {
                 location.replace('/game-end.html');
+                return;
             }
-            // FROZEN/SCHEDULED 시 UI 잠금은 추후 — 현재는 paint API 가 403 으로 막아줌
+            // WebSocket 메시지는 status만 담겨 올 수 있으므로 nextSession 까지 받기 위해 status API 재호출.
+            // 페인트 API 는 서버가 이미 GAME_NOT_ACTIVE 로 막아주니 UI 잠금은 안내(배너+토스트) 만으로 충분.
+            apiGet('/api/game/status').catch(() => null).then((s) => {
+                if (s) updateBanner(s);
+            });
         },
         onReconnected: () => {
             // 재연결 동안 누락된 픽셀이 있을 수 있으므로 캔버스 다시 받기.
@@ -123,6 +135,7 @@ async function init() {
 
     setInterval(tickCooldownDisplay, COOLDOWN_TICK_MS);
     setInterval(pollStats, STATS_POLL_MS);
+    setInterval(tickBanner, COOLDOWN_TICK_MS);   // 휴식 배너 카운트다운 갱신
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -411,6 +424,74 @@ function tickCooldownDisplay() {
     els.cooldown.textContent = `${m}:${String(s).padStart(2, '0')}`;
     els.cooldown.classList.add('active');
     els.cooldown.classList.remove('ready');
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  휴식 시간 배너 (FROZEN / SCHEDULED)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * /api/game/status 응답 한 번을 받아 배너 표시 여부 + 카운트다운 목표 시각 갱신.
+ *
+ * 호출 시점:
+ *  - init() 초기 1회
+ *  - WebSocket onGameStatusChanged (페이지 새로고침 없이 전환 받음)
+ *  - tickBanner() 가 카운트다운 0 도달 시 재호출 (서버 시계가 진실원천)
+ */
+function updateBanner(status) {
+    if (!status || status.status === 'ACTIVE' || status.status === 'ENDED') {
+        // 게임 진행 중 → 배너 숨김. ENDED 는 다른 로직이 game-end.html 로 보냄.
+        bannerNextStartsAt = null;
+        els.banner.classList.add('hidden');
+        return;
+    }
+    // FROZEN 또는 SCHEDULED — 다음 세션 시작 시각으로 카운트다운
+    const next = status.nextSession;
+    if (next?.startsAt) {
+        bannerNextStartsAt = new Date(next.startsAt);
+        // "Day 1 · 16:00 시작" 형식. KST 로컬타임으로 자동 변환됨.
+        const hm = bannerNextStartsAt.toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+        els.bannerLabel.textContent = `Day ${next.dayNumber} · ${hm} 시작`;
+    } else {
+        // 다음 세션 정보 없음 (드문 케이스 — 일정이 모두 끝났는데 ENDED 전환 직전)
+        bannerNextStartsAt = null;
+        els.bannerLabel.textContent = '휴식 시간';
+        els.bannerCountdown.textContent = '';
+    }
+    els.banner.classList.remove('hidden');
+    tickBanner();   // 즉시 1회 갱신 (interval 첫 틱까지 1초 기다리지 않게)
+}
+
+/**
+ * 1초마다 호출되어 남은 시간 텍스트 갱신.
+ *
+ * 카운트다운 0 도달 시 status 재조회 — WebSocket 으로 ACTIVE 가 늦게 와도
+ * 클라이언트에서 능동적으로 상태 폴링 한 번 해서 UI 막힘 방지.
+ */
+function tickBanner() {
+    if (!bannerNextStartsAt) return;
+    const ms = bannerNextStartsAt.getTime() - Date.now();
+    if (ms <= 0) {
+        els.bannerCountdown.textContent = '시작합니다…';
+        bannerNextStartsAt = null;
+        // 서버 상태 다시 확인. WebSocket 메시지가 곧 ACTIVE 를 줄 텐데 그 전에 능동 보정.
+        apiGet('/api/game/status').catch(() => null).then((s) => {
+            if (s) updateBanner(s);
+        });
+        return;
+    }
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    // 픽셀 폰트 + monospace 라 자리수 변화에도 흔들림 없음
+    els.bannerCountdown.textContent = h > 0
+        ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} 남음`
+        : `${m}:${String(s).padStart(2, '0')} 남음`;
 }
 
 // ─────────────────────────────────────────────────────────────────

@@ -13,7 +13,11 @@ src/main/resources/application-secret-*.yml
 *.env
 .env
 .env.*
-!.env.example          # 템플릿은 추적 OK
+# 템플릿(.example 접미사) 은 명시적으로 추적 허용.
+# git negation 은 multi-match 시 규칙이 까다로워 디렉토리별 명시가 가장 안전.
+!.env.example
+!*.env.example
+!scripts/.env.prod.example
 
 # AWS / GCP 자격증명 실수로 떨어진 경우 차단
 *.pem

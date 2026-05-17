@@ -42,6 +42,13 @@ dependencies {
 	// MySQL JDBC 드라이버. 런타임에만 필요 (컴파일 시점엔 JPA 인터페이스만 알면 됨)
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
+	// ── DB 마이그레이션 (Flyway) ──────────────────────────────────────
+	// db/migration/V{n}__{name}.sql 파일들을 버전 순서대로 적용 + flyway_schema_history 추적.
+	// 운영 정석 — ddl-auto: validate 와 짝지어 "스키마 변경은 SQL 마이그레이션 파일로만" 강제.
+	// flyway-mysql 은 MySQL 8 의 system view 차이 등 dialect 별 처리. 9.x 부터 분리 모듈 필수.
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-mysql'
+
 	// ── 캐시 / 실시간 ─────────────────────────────────────────────────
 	// Redis 클라이언트 (Lettuce 기본 내장). 캔버스 현재 상태, 쿨다운, Pub/Sub 채널 운반
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'

@@ -28,12 +28,26 @@ spring:
     password: localpassword     # 로컬 docker-compose 와 일치. 운영은 application-secret 에서 덮어씀
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  # ── Flyway DB 마이그레이션 ─────────────────────────────────────────
+  # 스키마 변경은 db/migration/V{n}__{name}.sql 파일로만. 부팅 시 Flyway 가 자동 적용.
+  # baseline-on-migrate: true — 기존 DB(이미 테이블 있는 운영) 에서도 안전하게 도입 가능.
+  #                              flyway_schema_history 만 생성하고 V1 은 skip.
+  # 로컬은 빈 DB 부터 시작이라 baseline 영향 X (V1 부터 정상 적용).
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    # baseline-version: 1 — 기존 운영 DB(이미 테이블 있음) 에서 V1 을 baseline 으로 표시 + skip.
+    # 신규(빈) DB 의 경우 baseline 트리거 안 됨 → V1 정상 적용.
+    # 0 으로 두면 신규 DB 인 척 V1 부터 실행 → 기존 DB 에서 CREATE TABLE 충돌.
+    baseline-version: 1
+    locations: classpath:db/migration
+
   # ── JPA / Hibernate ─────────────────────────────────────────────────
   jpa:
     hibernate:
-      # update: 엔티티 변경 시 테이블 자동 변경. 학습 단계에서 빠른 반복에 유리.
-      #         운영 직전엔 validate 로 바꾸고 마이그레이션 도구(Flyway 등) 도입 권장.
-      ddl-auto: update
+      # validate: 엔티티 ↔ DB 스키마 일치만 검사. 스키마 변경은 Flyway 마이그레이션이 담당.
+      # 학습 단계 첫 도입 후 운영 정석. ddl-auto 가 ALTER TABLE 자동 실행하지 않으므로 안전.
+      ddl-auto: validate
     show-sql: true               # 콘솔에 SQL 출력 — 어떤 쿼리가 실제로 나가는지 학습용으로 중요
     # OSIV(Open Session In View) 끔.
     # 기본 true 면 뷰 렌더링 시점까지 DB 커넥션을 들고 있어 트래픽 많을 때 풀 고갈 위험.

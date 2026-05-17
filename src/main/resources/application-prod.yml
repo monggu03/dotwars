@@ -1,0 +1,97 @@
+# ─────────────────────────────────────────────────────────────────────
+# application-prod.yml — 운영 환경 (EC2)
+#
+# 활성화 방법: java -jar ... -Dspring.profiles.active=prod
+# 모든 비밀값은 systemd 의 EnvironmentFile=/home/ec2-user/app/config/.env.prod 로 주입.
+#
+# 로컬(application.yml) 과 다른 핵심:
+#  - ddl-auto: update → validate  (스키마 변경 실수 방어)
+#  - show-sql: true → false       (운영 로그 폭주 방지)
+#  - forward-headers-strategy: native (Nginx 프록시 뒤에서 X-Forwarded-* 인식)
+#  - cookie.secure: true          (HTTPS 전용 — Nginx 가 HTTPS 종료)
+# ─────────────────────────────────────────────────────────────────────
+
+spring:
+  # 운영용 DB 연결 — 같은 EC2 의 Docker MySQL (127.0.0.1:3306).
+  # docker-compose.prod.yml 의 바인딩과 정확히 일치.
+  datasource:
+    url: jdbc:mysql://localhost:3306/dotwars?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # 학습/축제 운영 단계라 update 로. 첫 부팅 시 테이블 자동 생성 + DataInitializer 시드.
+      # 운영 정석은 validate + Flyway 마이그레이션. 다음 단계에서 도입 권장.
+      # update 의 위험: 엔티티 변경 → 자동 ALTER TABLE → 데이터 손실 가능성. 신중하게.
+      ddl-auto: update
+    show-sql: false   # 운영: SQL 로그 끔. 진단 시에만 일시적으로 true.
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+# ── 카카오 OAuth (운영 도메인) ─────────────────────────────────────────
+kakao:
+  client-id: ${KAKAO_CLIENT_ID}
+  client-secret: ${KAKAO_CLIENT_SECRET}
+  # 운영에서는 카카오 디벨로퍼스 등록한 https://dotwars.kr 콜백 URL.
+  # .env.prod 에서 KAKAO_REDIRECT_URI=https://dotwars.kr/api/auth/kakao/callback 으로 주입.
+  redirect-uri: ${KAKAO_REDIRECT_URI}
+  authorization-uri: https://kauth.kakao.com/oauth/authorize
+  token-uri: https://kauth.kakao.com/oauth/token
+  user-info-uri: https://kapi.kakao.com/v2/user/me
+
+# ── JWT ───────────────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity-seconds: 604800   # 7일
+  issuer: dotwars
+
+# ── 인증 쿠키 (운영: 반드시 Secure) ──────────────────────────────────
+auth:
+  cookie:
+    # HTTPS 전용. 평문 HTTP 로는 쿠키 전송 안 됨 → 토큰 도청 방지.
+    # 로컬 개발(application.yml) 의 false 와 달리 운영은 무조건 true.
+    secure: true
+
+# ── 게임 규칙 ─────────────────────────────────────────────────────────
+game:
+  canvas:
+    width: 50
+    height: 50
+  cooldown-seconds: 300
+
+# ── 서버 ──────────────────────────────────────────────────────────────
+server:
+  port: 8080
+  # Nginx 가 X-Forwarded-Proto: https 헤더를 보내면 Spring 이 그걸 신뢰해서
+  # "이 요청은 HTTPS" 로 인식. 결과적으로 cookie.secure 동작과 generated URL 정확.
+  # 'native' = 표준 X-Forwarded-* 헤더만 신뢰 (커스텀 헤더 무시 = 안전).
+  forward-headers-strategy: native
+
+# ── 로깅 ──────────────────────────────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    com.dongguk.dotwars: INFO          # 운영: DEBUG 아닌 INFO. 트러블슈팅 시에만 일시 DEBUG.
+    org.hibernate.SQL: WARN            # SQL 로그 끔
+  file:
+    name: /home/ec2-user/app/logs/dotwars.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"

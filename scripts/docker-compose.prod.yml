@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────
+# docker-compose.prod.yml — EC2 운영 환경
+#
+# 로컬 docker-compose.yml 과 다른 점:
+#  - 비밀번호를 환경변수로 ($MYSQL_ROOT_PASSWORD)
+#    → /home/ec2-user/app/config/.env.prod 에 저장 (git 절대 X)
+#  - 포트 바인딩이 127.0.0.1 한정 — 외부 인터넷에서 직접 DB/Redis 접근 차단
+#    → Spring Boot (같은 EC2) 만 localhost 로 붙음. 보안 그룹 + 바인딩 이중 방어.
+#
+# 학습 포인트:
+#  - "0.0.0.0:3306:3306" 이었으면 보안 그룹만 잘못 설정해도 인터넷에 MySQL 노출.
+#  - "127.0.0.1:3306:3306" 은 OS 커널 단에서 외부 인터페이스 차단 → 사고 방지.
+# ─────────────────────────────────────────────────────────────────────
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dotwars-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: dotwars
+      TZ: Asia/Seoul
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-storage-engine=InnoDB
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: dotwars-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql-data:
+    name: dotwars-mysql-data
+  redis-data:
+    name: dotwars-redis-data

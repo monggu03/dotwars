@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────
+# dotwars.service — systemd 유닛 파일.
+#
+# 설치 (EC2 에서, 첫 1회):
+#   sudo cp dotwars.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable dotwars      # EC2 재부팅 시 자동 시작
+#   sudo systemctl start dotwars
+#
+# 배포 후 재시작:
+#   sudo systemctl restart dotwars
+#
+# 상태 확인:
+#   sudo systemctl status dotwars
+#   journalctl -u dotwars -f -n 50    (또는 /home/ec2-user/app/logs/app*.log)
+# ─────────────────────────────────────────────────────────────────────
+
+[Unit]
+Description=dotwars Spring Boot
+# Docker 데몬 + 네트워크가 준비된 후에 시작.
+# MySQL/Redis 컨테이너는 docker compose 가 별도 관리 — Spring Boot 가 시작 시점에
+# 컨테이너가 healthy 여야 함 (배포 스크립트가 docker compose up -d 먼저 호출).
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/app
+
+# 환경변수 파일 — 비밀값 일괄 주입.
+# 파일이 없거나 비어있으면 부팅 실패 (필수 환경변수 누락).
+EnvironmentFile=/home/ec2-user/app/config/.env.prod
+
+# JVM 옵션 설명:
+#  -Xms256m -Xmx1024m: 4GB 메모리의 ~25% 만 JVM heap.
+#                      MySQL(~700M) + Redis(~50M) + JVM(~1G) + OS/buffer = 안전.
+#  -Dspring.profiles.active=prod: application-prod.yml 활성.
+#  -Dfile.encoding=UTF-8: 한글 로그 깨짐 방지.
+ExecStart=/usr/bin/java \
+    -Xms256m -Xmx1024m \
+    -Dspring.profiles.active=prod \
+    -Dfile.encoding=UTF-8 \
+    -jar /home/ec2-user/app/dotwars.jar
+
+# 크래시 시 10초 후 자동 재시작. 일시적 OOM/네트워크 장애 자가 회복.
+Restart=on-failure
+RestartSec=10
+
+# 로그 분리 — systemd journal 외에 별도 파일에도 기록 (tail 편의).
+StandardOutput=append:/home/ec2-user/app/logs/app.log
+StandardError=append:/home/ec2-user/app/logs/app-error.log
+
+# 종료 시 SIGTERM 후 30초 대기, 그래도 안 죽으면 SIGKILL.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -168,8 +168,8 @@ public class DataInitializer implements ApplicationRunner {
 
         Game game = Game.builder()
                 .name("2026 동국대 축제 픽셀 점령전")
-                .canvasWidth(50)             // application.yml 의 game.canvas.width 와 동일하게 유지
-                .canvasHeight(50)
+                .canvasWidth(18)             // application.yml 의 game.canvas.width 와 동일하게 유지 (9:16 모바일 비율)
+                .canvasHeight(32)
                 .cooldownSeconds(300)        // 5분 — application.yml 의 game.cooldown-seconds 와 동일
                 .startsAt(startsAt)
                 .endsAt(endsAt)

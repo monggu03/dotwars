@@ -13,9 +13,12 @@ import { requireLoginWithDepartment } from './auth-guard.js';
 import { connectWebSocket } from './websocket.js';
 
 // ── 상수 ────────────────────────────────────────────────────────
-const GRID_SIZE = 50;           // 50x50 셀
-const CELL_PX = 10;             // 셀당 캔버스 픽셀 (해상도 500x500)
-const CANVAS_PX = GRID_SIZE * CELL_PX;
+// 캔버스 그리드 — 모바일 9:16 비율. application.yml 의 game.canvas.* 와 일치 필요.
+const GRID_WIDTH = 18;
+const GRID_HEIGHT = 32;
+const CELL_PX = 20;             // 셀당 캔버스 픽셀 (해상도 360x640)
+const CANVAS_W = GRID_WIDTH * CELL_PX;
+const CANVAS_H = GRID_HEIGHT * CELL_PX;
 const GRID_STROKE = 'rgba(0, 0, 0, 0.10)';   // 옅은 회색 격자선
 // 통계는 WebSocket 으로 안 보내고 폴링 유지 — 부하 크고 실시간성 덜 중요.
 // 3초 → 5초로 늘림 (WebSocket 으로 picks 즉시 갱신되니까 굳이 짧을 필요 없음).
@@ -144,7 +147,7 @@ async function init() {
 
 function fillCanvasWhite() {
     ctx.fillStyle = FACTION_COLORS[0];
-    ctx.fillRect(0, 0, CANVAS_PX, CANVAS_PX);
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 }
 
 /**
@@ -159,18 +162,23 @@ function drawGrid() {
     ctx.strokeStyle = GRID_STROKE;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let i = 0; i <= GRID_SIZE; i++) {
+    // 세로선 (GRID_WIDTH + 1 개) — 캔버스 높이만큼 그음
+    for (let i = 0; i <= GRID_WIDTH; i++) {
         const p = i * CELL_PX + 0.5;
-        ctx.moveTo(p, 0);       ctx.lineTo(p, CANVAS_PX);
-        ctx.moveTo(0, p);       ctx.lineTo(CANVAS_PX, p);
+        ctx.moveTo(p, 0);       ctx.lineTo(p, CANVAS_H);
+    }
+    // 가로선 (GRID_HEIGHT + 1 개) — 캔버스 폭만큼 그음
+    for (let i = 0; i <= GRID_HEIGHT; i++) {
+        const p = i * CELL_PX + 0.5;
+        ctx.moveTo(0, p);       ctx.lineTo(CANVAS_W, p);
     }
     ctx.stroke();
 }
 
 async function loadCanvas() {
     const data = await apiGet('/api/game/canvas');
-    for (let y = 0; y < GRID_SIZE; y++) {
-        for (let x = 0; x < GRID_SIZE; x++) {
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+        for (let x = 0; x < GRID_WIDTH; x++) {
             const factionId = data.pixels[y][x];
             if (factionId > 0) {
                 fillCell(x, y, FACTION_COLORS[factionId]);
@@ -265,7 +273,7 @@ function setupTapHandler() {
 
 function onCanvasClick(e) {
     const { x, y } = clientToCell(e.clientX, e.clientY);
-    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return;
+    if (x < 0 || x >= GRID_WIDTH || y < 0 || y >= GRID_HEIGHT) return;
 
     const now = Date.now();
     const sameAsLast =
@@ -289,8 +297,8 @@ function clientToCell(clientX, clientY) {
     // canvas 의 화면상 영역 → 50x50 셀 좌표.
     // panzoom 의 transform 도 getBoundingClientRect() 에 반영되므로 비례 계산만으로 정확.
     const rect = els.canvas.getBoundingClientRect();
-    const sx = GRID_SIZE / rect.width;
-    const sy = GRID_SIZE / rect.height;
+    const sx = GRID_WIDTH / rect.width;
+    const sy = GRID_HEIGHT / rect.height;
     return {
         x: Math.floor((clientX - rect.left) * sx),
         y: Math.floor((clientY - rect.top) * sy),
@@ -312,9 +320,9 @@ function clearSelection() {
 }
 
 function updateCursor(x, y) {
-    // wrapper 의 2% × 2% = 1 cell. left/top 도 퍼센트로 매핑.
-    els.pixelCursor.style.left = `${(x / GRID_SIZE) * 100}%`;
-    els.pixelCursor.style.top = `${(y / GRID_SIZE) * 100}%`;
+    // wrapper 안에서 셀 1개 위치를 퍼센트로 매핑. CSS 가 width/height 도 같은 분모로 계산.
+    els.pixelCursor.style.left = `${(x / GRID_WIDTH) * 100}%`;
+    els.pixelCursor.style.top = `${(y / GRID_HEIGHT) * 100}%`;
     els.pixelCursor.classList.add('visible');
 }
 

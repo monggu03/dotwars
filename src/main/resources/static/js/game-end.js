@@ -14,9 +14,12 @@
 
 import { apiGet, ApiError } from './api.js';
 
-const GRID_SIZE = 50;
-const CELL_PX = 10;
-const CANVAS_PX = GRID_SIZE * CELL_PX;
+// 9:16 모바일 비율 — game.js 와 동일. application.yml game.canvas.* 와 일치.
+const GRID_WIDTH = 18;
+const GRID_HEIGHT = 32;
+const CELL_PX = 20;
+const CANVAS_W = GRID_WIDTH * CELL_PX;
+const CANVAS_H = GRID_HEIGHT * CELL_PX;
 const GRID_STROKE = 'rgba(0, 0, 0, 0.10)';
 
 const FACTION_COLORS = {
@@ -72,11 +75,11 @@ function drawCanvas(data) {
 
     // 흰 배경
     ctx.fillStyle = FACTION_COLORS[0];
-    ctx.fillRect(0, 0, CANVAS_PX, CANVAS_PX);
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     // 픽셀 셀 채우기
-    for (let y = 0; y < GRID_SIZE; y++) {
-        for (let x = 0; x < GRID_SIZE; x++) {
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+        for (let x = 0; x < GRID_WIDTH; x++) {
             const fid = data.pixels[y][x];
             if (fid > 0) {
                 ctx.fillStyle = FACTION_COLORS[fid] || FACTION_COLORS[0];
@@ -89,10 +92,15 @@ function drawCanvas(data) {
     ctx.strokeStyle = GRID_STROKE;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let i = 0; i <= GRID_SIZE; i++) {
+    // 세로선
+    for (let i = 0; i <= GRID_WIDTH; i++) {
         const p = i * CELL_PX + 0.5;
-        ctx.moveTo(p, 0);       ctx.lineTo(p, CANVAS_PX);
-        ctx.moveTo(0, p);       ctx.lineTo(CANVAS_PX, p);
+        ctx.moveTo(p, 0);       ctx.lineTo(p, CANVAS_H);
+    }
+    // 가로선
+    for (let i = 0; i <= GRID_HEIGHT; i++) {
+        const p = i * CELL_PX + 0.5;
+        ctx.moveTo(0, p);       ctx.lineTo(CANVAS_W, p);
     }
     ctx.stroke();
 

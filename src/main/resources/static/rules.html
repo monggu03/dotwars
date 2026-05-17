@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A0A">
+    <title>게임 규칙 — dotwars</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/rules.css">
+</head>
+<body>
+<main class="app-container">
+    <section class="rules-screen">
+
+        <!-- ── 상단 헤더 ─────────────────────────────────────────── -->
+        <header class="rules-header">
+            <a class="rules-back" href="/index.html" aria-label="뒤로">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="square" fill="none"/>
+                </svg>
+            </a>
+            <h1 class="rules-title font-pixel">RULES</h1>
+        </header>
+
+        <!-- ── 규칙 목록 ─────────────────────────────────────────── -->
+        <section class="rules-section">
+            <h2 class="rules-section__title">게임 규칙</h2>
+            <ul class="rules-list">
+                <li class="rules-item">
+                    <span class="rules-item__num font-pixel">01</span>
+                    <div class="rules-item__body">
+                        <div class="rules-item__head">캔버스 50×50</div>
+                        <div class="rules-item__desc">흰 배경의 픽셀 그리드. 모든 진영이 같은 캔버스 위에서 경쟁합니다.</div>
+                    </div>
+                </li>
+                <li class="rules-item">
+                    <span class="rules-item__num font-pixel">02</span>
+                    <div class="rules-item__body">
+                        <div class="rules-item__head">5분에 1픽셀</div>
+                        <div class="rules-item__desc">한 픽셀을 칠하면 5분 쿨다운. 신중하게 위치 선택.</div>
+                    </div>
+                </li>
+                <li class="rules-item">
+                    <span class="rules-item__num font-pixel">03</span>
+                    <div class="rules-item__body">
+                        <div class="rules-item__head">단과대 = 진영 색깔</div>
+                        <div class="rules-item__desc">로그인 후 본인 단과대를 1회 선택. 같은 진영 단과대는 같은 색으로 협력합니다.</div>
+                    </div>
+                </li>
+                <li class="rules-item">
+                    <span class="rules-item__num font-pixel">04</span>
+                    <div class="rules-item__body">
+                        <div class="rules-item__head">매일 16:00 ~ 24:00</div>
+                        <div class="rules-item__desc">3일간 운영. 24:00에 freeze, 다음날 16:00에 그 상태로 재개.</div>
+                    </div>
+                </li>
+                <li class="rules-item">
+                    <span class="rules-item__num font-pixel">05</span>
+                    <div class="rules-item__body">
+                        <div class="rules-item__head">최다 픽셀 진영 우승</div>
+                        <div class="rules-item__desc">3일차 24:00에 게임 종료. 가장 많은 픽셀을 차지한 진영이 우승.</div>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+        <!-- ── 진영 5개 ─────────────────────────────────────────── -->
+        <section class="rules-section">
+            <h2 class="rules-section__title">진영</h2>
+            <div class="faction-list" id="faction-list">
+                <p class="loader">진영 정보를 불러오는 중...</p>
+            </div>
+        </section>
+
+        <!-- ── 시작 버튼 ─────────────────────────────────────────── -->
+        <div class="rules-cta">
+            <a class="btn btn-primary btn-block" href="/index.html">시작하기</a>
+        </div>
+
+    </section>
+</main>
+
+<script type="module" src="/js/rules.js"></script>
+</body>
+</html>

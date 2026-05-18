@@ -15,6 +15,7 @@
  */
 
 import { apiGet, ApiError } from './api.js';
+import { inviteFriends } from './share.js';
 
 const STATUS_POLL_MS = 10_000;
 const TICK_MS = 1_000;
@@ -27,7 +28,10 @@ const els = {
     label: $('waiting-label'),
     countdown: $('waiting-countdown'),
     meta: $('waiting-meta'),
+    inviteFriends: $('invite-friends'),
 };
+
+els.inviteFriends?.addEventListener('click', () => inviteFriends());
 
 let nextStartsAt = null;
 

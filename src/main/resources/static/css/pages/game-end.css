@@ -54,7 +54,7 @@
 #end-canvas {
     width: 100%;
     max-width: 360px;
-    aspect-ratio: 9 / 16;
+    aspect-ratio: 4 / 7;
     background: var(--white-canvas);
     border: 1px solid var(--border-strong);
     /* 픽셀 또렷하게 유지 — 줌 시에도 안티얼라이즈 X */

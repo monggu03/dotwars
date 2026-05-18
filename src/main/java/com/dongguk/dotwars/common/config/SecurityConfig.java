@@ -86,6 +86,7 @@ public class SecurityConfig {
                                 "/game.html",
                                 "/game-end.html",
                                 "/rules.html",
+                                "/waiting.html",
                                 "/select-department.html"
                         ).permitAll()
 

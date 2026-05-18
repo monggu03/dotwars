@@ -41,23 +41,15 @@
     <div class="minibar__left">
         <span class="faction-color-dot" id="my-faction-dot" aria-hidden="true"></span>
         <span class="font-pixel" id="my-faction-name">--</span>
-        <span class="minibar__rank font-pixel" id="my-rank">--위</span>
+        <!-- 순위 텍스트가 곧 모달 트리거 — 별도 FAB 버튼 없음. -->
+        <button class="minibar__rank font-pixel" id="my-rank" type="button" aria-label="전체 순위 보기">
+            --위
+        </button>
     </div>
     <div class="minibar__right">
         <span class="cooldown-timer font-pixel" id="cooldown-timer">--:--</span>
     </div>
 </header>
-
-<!-- ── 휴식 시간 배너 (FROZEN/SCHEDULED 시 자동 노출) ─────────────── -->
-<!--
-  미니바 바로 아래 fixed. status === ACTIVE 가 아니면 .hidden 제거되어 표시.
-  카운트다운은 /api/game/status 의 nextSession.startsAt 기준 1초마다 갱신.
-  WebSocket 으로 status 전환 받으면 즉시 토글 (loadStatus 재호출).
--->
-<div class="game-banner hidden" id="game-banner" role="status" aria-live="polite">
-    <div class="game-banner__label" id="banner-label">휴식 시간</div>
-    <div class="game-banner__countdown font-pixel" id="banner-countdown">--:--:--</div>
-</div>
 
 <!-- ── 캔버스 영역 ────────────────────────────────────────────────── -->
 <!--
@@ -67,8 +59,8 @@
 -->
 <main class="canvas-stage" id="canvas-stage">
     <div class="canvas-wrapper" id="canvas-wrapper">
-        <canvas id="game-canvas" width="360" height="640"
-                aria-label="18x32 픽셀 캔버스"></canvas>
+        <canvas id="game-canvas" width="360" height="630"
+                aria-label="12x21 픽셀 캔버스"></canvas>
         <!--
           픽셀 커서 — 사용자가 1탭 선택한 칸을 강조하는 overlay.
           wrapper 안에 absolute 배치되어 panzoom 의 transform 따라 함께 변환.
@@ -77,9 +69,6 @@
         <div class="pixel-cursor" id="pixel-cursor" aria-hidden="true"></div>
     </div>
 </main>
-
-<!-- ── 우측 하단 플로팅 버튼 (전체 순위 모달 열기) ─────────────────── -->
-<button class="fab" id="open-stats" type="button">순위</button>
 
 <!--
   ── 하단 좌표 바 ─────────────────────────────────────────────────

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A0A">
+    <title>곧 시작합니다 — dotwars</title>
+
+    <!-- Open Graph — index.html 과 동일한 미리보기 -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="dotwars — 동국대학교 픽셀 점령전">
+    <meta property="og:description" content="5분에 1픽셀, 3일 동안 캔버스를 단과대 진영색으로 점령하세요.">
+    <meta property="og:url" content="https://dotwars.kr/waiting.html">
+    <meta property="og:image" content="https://dotwars.kr/images/og-image.png">
+    <meta property="og:image:width" content="1488">
+    <meta property="og:image:height" content="744">
+    <meta property="og:locale" content="ko_KR">
+    <meta property="og:site_name" content="dotwars">
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/waiting.css">
+</head>
+<body>
+<main class="app-container">
+    <section class="waiting-screen">
+
+        <!-- 진영 정보 (로그인+단과대 선택 완료 사용자만 보임) -->
+        <header class="waiting-header" id="waiting-header" hidden>
+            <span class="faction-color-dot" id="my-faction-dot" aria-hidden="true"></span>
+            <span class="font-pixel" id="my-faction-name">--</span>
+        </header>
+
+        <!-- 메인 카운트다운 영역 -->
+        <div class="waiting-main">
+            <p class="waiting-label" id="waiting-label">— 로딩 중 —</p>
+            <p class="waiting-countdown font-pixel" id="waiting-countdown">--:--:--</p>
+            <p class="waiting-hint">남음</p>
+        </div>
+
+        <!-- 보조 안내 -->
+        <footer class="waiting-footer">
+            <p class="waiting-meta" id="waiting-meta">시작 시각이 되면 자동으로 게임 화면으로 이동합니다.</p>
+        </footer>
+
+    </section>
+</main>
+
+<script type="module" src="/js/waiting.js"></script>
+</body>
+</html>

@@ -330,43 +330,6 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────
- *  플로팅 액션 버튼 (FAB)
- *
- *  - 우측 하단 고정
- *  - 둥근 사각형(8px radius) — 완전 원형 X (픽셀 미학)
- *  - 텍스트 라벨 사용 (이모지 X)
- * ───────────────────────────────────────────────────────────────── */
-
-.fab {
-    position: fixed;
-    /* 480px 컬럼 우측 끝에서 var(--space-4) 안쪽.
-       화면 ≤ 480px: 검정 양 옆 없음 → 우측 16px.
-       화면 > 480px: 컬럼 우측 끝 + 16px (양 옆 검정 폭만큼 추가). */
-    right: max(var(--space-4), calc((100vw - 480px) / 2 + var(--space-4)));
-    bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-    min-width: 56px;
-    min-height: 56px;
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-lg);
-    color: var(--text-primary);
-    font-family: var(--font-pixel);
-    font-size: var(--text-xs);
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    z-index: 50;
-    box-shadow: var(--shadow-modal);
-    transition: var(--transition-fast);
-}
-.fab:hover {
-    border-color: var(--text-primary);
-}
-.fab:active {
-    transform: translateY(1px);
-}
-
-/* ─────────────────────────────────────────────────────────────────
  *  텍스트 유틸 — 픽셀 폰트
  * ───────────────────────────────────────────────────────────────── */
 

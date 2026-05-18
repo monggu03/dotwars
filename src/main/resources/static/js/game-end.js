@@ -14,10 +14,10 @@
 
 import { apiGet, ApiError } from './api.js';
 
-// 9:16 모바일 비율 — game.js 와 동일. application.yml game.canvas.* 와 일치.
-const GRID_WIDTH = 18;
-const GRID_HEIGHT = 32;
-const CELL_PX = 20;
+// 4:7 모바일 비율 — game.js 와 동일. application.yml game.canvas.* 와 일치.
+const GRID_WIDTH = 12;
+const GRID_HEIGHT = 21;
+const CELL_PX = 30;
 const CANVAS_W = GRID_WIDTH * CELL_PX;
 const CANVAS_H = GRID_HEIGHT * CELL_PX;
 const GRID_STROKE = 'rgba(0, 0, 0, 0.10)';

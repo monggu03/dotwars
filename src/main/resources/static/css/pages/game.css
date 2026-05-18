@@ -75,9 +75,28 @@ body {
     flex-shrink: 0;
 }
 
+/* 순위 텍스트가 곧 모달 트리거 — 텍스트 룩 유지하면서 클릭 가능. */
 .minibar__rank {
     margin-left: var(--space-2);
     color: var(--text-secondary);
+    /* button 기본 스타일 리셋 */
+    background: none;
+    border: none;
+    padding: 2px 6px;
+    cursor: pointer;
+    font: inherit;
+    letter-spacing: inherit;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
+}
+.minibar__rank:hover,
+.minibar__rank:focus-visible {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+    outline: none;
+}
+.minibar__rank:active {
+    transform: translateY(1px);
 }
 
 .cooldown-timer {
@@ -90,61 +109,6 @@ body {
 }
 .cooldown-timer.active {
     color: var(--status-warning);
-}
-
-/* ── 휴식 시간 배너 (FROZEN/SCHEDULED) ────────────────────────── */
-
-/*
- * 미니바 바로 아래에 fixed. 동작 중(ACTIVE)이 아닐 때만 노출.
- *
- * top 값:
- *   미니바가 fixed top:0 으로 자리잡고 있음 (높이 = padding-top + 내용 + padding-bottom).
- *   미니바 내용은 text-xs(12px) 단일 줄이고 padding 은 space-2(8px) * 2.
- *   safe-area-inset-top 만큼 더 내려가니 배너의 top 도 그 만큼 더하기.
- *   대략 미니바 높이 = safe-area + 36~40px → 배너 top 으로 그 값을 그대로 사용.
- *
- * z-index 9:
- *   minibar(10) 보다 한 단계 아래. 화면 회전/리플로우 직후 살짝 겹치면 미니바가 우선.
- */
-.game-banner {
-    position: fixed;
-    top: calc(env(safe-area-inset-top) + 38px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-
-    padding: var(--space-3);
-    padding-left: calc(var(--space-3) + env(safe-area-inset-left));
-    padding-right: calc(var(--space-3) + env(safe-area-inset-right));
-
-    background: var(--bg-elevated);
-    border-bottom: 1px solid var(--border-default);
-    /* 휴식 신호 — design.md 의 "진영 색은 왼쪽 4px 라인" 패턴을 status-warning 으로 재사용 */
-    border-left: 4px solid var(--status-warning);
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-
-    z-index: 9;
-    color: var(--text-primary);
-
-    /* 캔버스 panzoom 이벤트를 가리지 않도록 — 배너는 시각 안내만 */
-    pointer-events: none;
-}
-
-.game-banner__label {
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    letter-spacing: 0.04em;
-}
-
-.game-banner__countdown {
-    font-size: var(--text-sm);
-    color: var(--text-primary);
-    letter-spacing: 0.08em;
 }
 
 /* ── 캔버스 영역 ──────────────────────────────────────────────── */
@@ -160,8 +124,20 @@ body {
     width: 100%;
     max-width: 480px;
 
+    /*
+     * Padding — wrapper 가 minibar/모서리와 시각적으로 분리.
+     *  top:    minibar(약 30px) + safe-area-top + 여유
+     *  bottom: safe-area-bottom + 여유 (FAB 없음, coord-bar 는 선택 시에만 잠깐)
+     *  좌우:   wrapper 의 4px box-shadow 외곽 띠가 overflow:hidden 에 안 잘리도록 여백
+     */
+    padding-top: calc(env(safe-area-inset-top) + 48px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
+    padding-left: 8px;
+    padding-right: 8px;
+    box-sizing: border-box;
+
     background: var(--bg-base);
-    /* flex 가운데 정렬 — wrapper 가 stage 정중앙. */
+    /* flex 가운데 정렬 — wrapper 가 padded 영역 중앙. */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -172,17 +148,19 @@ body {
 
 .canvas-wrapper {
     /*
-     * 9:16 모바일 비율. 폰 화면을 세로로 꽉 채워 셀이 가장 커 보이게.
-     * width 100% + max-height 95% 조합 — 좁은 폰에선 width 가, 짧은 데스크탑에선 height 가 한계.
+     * 9:16 모바일 비율. canvas-stage 의 padded inner area 를 꽉 채움.
+     * width 100% + max-height 100% 조합 — 짧은 화면에선 height 가, 좁은 화면에선 width 가 한계.
      * aspect-ratio 가 둘 중 작은 쪽에 맞춰 다른 차원을 자동 계산.
      */
     width: 100%;
     max-width: 480px;
-    max-height: 95%;
-    aspect-ratio: 9 / 16;
+    max-height: 100%;
+    aspect-ratio: 4 / 7;
     background: var(--white-canvas);
-    /* 캔버스 가장자리 살짝 강조 — 검정 OS 와 흰 캔버스 경계 */
+    /* 가장자리 강조 — 1px border 안쪽, 4px 외곽 띠로 "별개 박스" 시각화.
+       design.md 의 4px 그리드 / 진영색 라인 패턴과 일관. */
     border: 1px solid var(--border-strong);
+    box-shadow: 0 0 0 4px var(--bg-elevated);
     position: relative;   /* pixel-cursor absolute 배치 기준 */
 }
 
@@ -203,13 +181,13 @@ body {
 /*
  * 사용자가 선택한 1칸을 캔버스 위에서 강조.
  * wrapper 안에서 셀 1개 크기 = (100% / GRID_WIDTH) × (100% / GRID_HEIGHT).
- * 18x32 그리드 → 5.555% × 3.125%. JS 의 GRID_WIDTH/HEIGHT 와 동기화 필요.
+ * 12x21 그리드 → 8.333% × 4.762%. JS 의 GRID_WIDTH/HEIGHT 와 동기화 필요.
  * pointer-events: none — 클릭이 캔버스로 통과되도록.
  */
 .pixel-cursor {
     position: absolute;
-    width: calc(100% / 18);
-    height: calc(100% / 32);
+    width: calc(100% / 12);
+    height: calc(100% / 21);
     /* 검은 외곽 + 흰색 안쪽 — 어느 진영색 위에서도 잘 보이는 대비 */
     outline: 2px solid var(--bg-base);
     box-shadow: inset 0 0 0 1px var(--text-primary);

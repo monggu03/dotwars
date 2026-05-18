@@ -1,0 +1,74 @@
+/*
+ * waiting.css — 세션 시작 대기 화면.
+ *
+ * 사용 시점: status 가 FROZEN 또는 SCHEDULED 일 때 game.html 가 이쪽으로 리다이렉트.
+ * 큰 카운트다운만 화면 정중앙. 캔버스도 미니바도 없음 — 깨끗.
+ */
+
+.waiting-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--space-6);
+    text-align: center;
+}
+
+/* ── 상단 진영 표시 (로그인+단과대 선택 완료 시) ──────────────── */
+
+.waiting-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding-top: env(safe-area-inset-top);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+.waiting-header[hidden] {
+    display: none;
+}
+
+/* ── 메인 카운트다운 (정중앙) ────────────────────────────────── */
+
+.waiting-main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.waiting-label {
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    letter-spacing: 0.04em;
+}
+
+/* 카운트다운 — 화면에서 가장 큰 시각 자산 */
+.waiting-countdown {
+    color: var(--text-primary);
+    font-size: var(--text-pixel-lg);
+    letter-spacing: 0.08em;
+    /* 줄바꿈 방지 — "5:32:14" 같은 형식이 한 줄에 */
+    white-space: nowrap;
+}
+
+.waiting-hint {
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    letter-spacing: 0.05em;
+}
+
+/* ── 하단 안내 ────────────────────────────────────────────── */
+
+.waiting-footer {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.waiting-meta {
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+}

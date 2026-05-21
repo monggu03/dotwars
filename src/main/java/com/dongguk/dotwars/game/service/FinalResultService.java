@@ -44,10 +44,10 @@ public class FinalResultService {
     private final GameRepository gameRepository;
     private final FinalResultRepository finalResultRepository;
 
-    @Value("${game.canvas.width:50}")
+    @Value("${game.canvas.width:11}")
     private int canvasWidth;
 
-    @Value("${game.canvas.height:50}")
+    @Value("${game.canvas.height:17}")
     private int canvasHeight;
 
     /**

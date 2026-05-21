@@ -51,10 +51,10 @@ public class FactionStatsService {
     private final FactionRepository factionRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${game.canvas.width:50}")
+    @Value("${game.canvas.width:11}")
     private int canvasWidth;
 
-    @Value("${game.canvas.height:50}")
+    @Value("${game.canvas.height:17}")
     private int canvasHeight;
 
     public FactionStatsResponse getStats() {

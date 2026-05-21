@@ -50,14 +50,15 @@ public class CanvasService {
     private final CanvasBroadcastService broadcastService;
 
     // 쿨다운 초. application.yml 의 game.cooldown-seconds 와 일치 (운영 중 yml 만 바꿔도 반영)
-    @Value("${game.cooldown-seconds:300}")
+    // 기본값은 yml 누락 시 fallback — 실제 운영 값(5초)과 일치시켜 옛 300초로 잘못 부팅되는 함정 방지.
+    @Value("${game.cooldown-seconds:5}")
     private int cooldownSeconds;
 
-    // 캔버스 크기 — 응답 생성/검증에 사용
-    @Value("${game.canvas.width:50}")
+    // 캔버스 크기 — 응답 생성/검증에 사용. 기본값도 실제 11×17 과 일치시킴.
+    @Value("${game.canvas.width:11}")
     private int canvasWidth;
 
-    @Value("${game.canvas.height:50}")
+    @Value("${game.canvas.height:17}")
     private int canvasHeight;
 
     // ─────────────────────────────────────────────────────────────────
@@ -129,8 +130,9 @@ public class CanvasService {
                     .orElseThrow(() -> new UserNotFoundException(userId));
             if (user.getDepartment() == null) {
                 // 단과대 미선택 사용자는 픽셀 칠 권리 없음.
-                // BusinessException 으로 분리해도 되지만 한 곳에서만 발생하므로 inline.
-                throw new IllegalStateException("단과대 선택이 필요합니다.");
+                // IllegalArgumentException 으로 던져 GlobalExceptionHandler 가 400 으로 응답하게 함
+                // (IllegalStateException 은 핸들러가 없어 500 + ERROR 로그로 떨어지는 함정).
+                throw new IllegalArgumentException("단과대 선택이 필요합니다.");
             }
             Long factionId = user.getDepartment().getFaction().getId();
 
@@ -160,8 +162,14 @@ public class CanvasService {
             // 같은 진영 색 덮어쓰기는 카운트 변화 없음 → 아무 것도 안 함.
 
             // ── 7) 비동기 픽셀 이력 저장 ───────────────────────────
-            // 별도 스레드에서 INSERT — 응답 지연 0. 큐 가득 차거나 DB 실패해도 사용자 응답 영향 없음.
-            historyAsyncService.save(userId, x, y, factionId);
+            // 별도 스레드에서 INSERT — 응답 지연 0. 큐가 가득 차 제출이 거부되거나(TaskRejectedException)
+            // 비동기 실패해도 try/catch 로 삼켜 "이력만 누락, 메인 흐름은 무사" 를 실제로 보장.
+            // (감싸지 않으면 이미 Redis 반영된 픽셀의 쿨다운이 catch 에서 롤백돼 500 → 중복 페인트 위험)
+            try {
+                historyAsyncService.save(userId, x, y, factionId);
+            } catch (RuntimeException ex) {
+                log.warn("[paint] 픽셀 이력 비동기 저장 제출 실패 (이력만 누락) user={} ({},{}): {}", userId, x, y, ex.toString());
+            }
 
             // ── 8) WebSocket 브로드캐스트 ─────────────────────────
             // 모든 구독자(/topic/canvas) 에게 즉시 알림. SimpMessagingTemplate.convertAndSend 는
@@ -186,10 +194,10 @@ public class CanvasService {
     // ─────────────────────────────────────────────────────────────────
 
     /**
-     * 현재 캔버스 전체 상태 — 50x50 int 2D 배열.
+     * 현재 캔버스 전체 상태 — 11×17 그리드.
      * 0 = 흰색(미칠해짐), 1~5 = factionId.
      *
-     * HGETALL 은 키-값 전체를 1 round-trip 으로 받음. 50x50=2500 칸이라 페이로드 작음.
+     * HGETALL 은 키-값 전체를 1 round-trip 으로 받음. 11×17=187 칸이라 페이로드 작음.
      */
     @Transactional(readOnly = true)
     public Map<String, String> getCanvasRaw() {

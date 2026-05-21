@@ -34,6 +34,14 @@ const els = {
 
 els.inviteFriends?.addEventListener('click', () => inviteFriends());
 
+// 게임 시작 안내 모달 — 열기/닫기 (배경 클릭으로도 닫힘)
+const noticeModal = $('notice-modal');
+$('notice-open')?.addEventListener('click', () => noticeModal?.classList.remove('hidden'));
+$('notice-close')?.addEventListener('click', () => noticeModal?.classList.add('hidden'));
+noticeModal?.addEventListener('click', (e) => {
+    if (e.target === noticeModal) noticeModal.classList.add('hidden');
+});
+
 let nextStartsAt = null;
 
 init().catch((e) => console.error('[waiting] init 실패', e));

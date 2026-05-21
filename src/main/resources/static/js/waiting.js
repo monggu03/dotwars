@@ -130,9 +130,10 @@ async function pollWaiting() {
 }
 
 // 픽셀 불꽃 (8×8). 달과 동일한 crispEdges 도트 방식. 위로 좁고 아래로 둥근 화염.
+// 2톤: 외곽은 currentColor(주황, CSS), 안쪽 "불심" 은 노랑으로 덧칠해 불 느낌.
 const FIRE_SVG =
     '<svg class="waiting-fire" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">'
-    + '<g fill="currentColor">'
+    + '<g fill="currentColor">'   // 화염 외곽 (주황)
     + '<rect x="4" y="0" width="1" height="1"/>'
     + '<rect x="3" y="1" width="2" height="1"/>'
     + '<rect x="2" y="2" width="3" height="1"/>'
@@ -141,6 +142,12 @@ const FIRE_SVG =
     + '<rect x="1" y="5" width="6" height="1"/>'
     + '<rect x="1" y="6" width="6" height="1"/>'
     + '<rect x="2" y="7" width="4" height="1"/>'
+    + '</g>'
+    + '<g fill="#FFE14D">'        // 안쪽 불심 (노랑) — 외곽 위에 덧칠
+    + '<rect x="3" y="4" width="1" height="1"/>'
+    + '<rect x="2" y="5" width="3" height="1"/>'
+    + '<rect x="2" y="6" width="3" height="1"/>'
+    + '<rect x="3" y="7" width="2" height="1"/>'
     + '</g></svg>';
 
 // 게임은 매일 08:00~24:00 운영 → 00:00~07:59 는 야간 휴장(새벽).

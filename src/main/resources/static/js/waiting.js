@@ -83,7 +83,18 @@ async function refreshStatus() {
         els.label.textContent = '휴식 시간';
         els.countdown.textContent = '';
     }
+    // 새벽(00~08시) 야간 휴장이면 숙면 멘트, 그 외엔 자동 이동 안내.
+    els.meta.textContent = isNightHours()
+        ? '새벽에는 게임보다 숙면을 취하세요!'
+        : '시작 시각이 되면 자동으로 게임 화면으로 이동합니다.';
     tick();
+}
+
+// 게임은 매일 08:00~24:00 운영 → 00:00~07:59 는 야간 휴장(새벽).
+// 사용자 로컬 시각 기준 (한국 사용자는 KST = 운영 시각과 동일).
+function isNightHours() {
+    const h = new Date().getHours();
+    return h >= 0 && h < 8;
 }
 
 function tick() {

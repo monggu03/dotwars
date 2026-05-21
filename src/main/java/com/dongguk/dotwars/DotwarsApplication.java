@@ -6,6 +6,8 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.util.TimeZone;
+
 // UserDetailsServiceAutoConfiguration 제외 — 우리는 JWT 만 사용.
 // 기본 활성화 시 inMemoryUserDetailsManager + 매 부팅 시 랜덤 패스워드 로그가 찍힘
 //   ("Using generated security password: ...")
@@ -20,6 +22,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class DotwarsApplication {
 
 	public static void main(String[] args) {
+		// JVM 기본 타임존을 KST 로 고정 — 호스트(EC2/Docker) TZ 설정과 무관하게
+		// LocalDateTime.now() / ZoneId.systemDefault() 가 항상 KST 가 되게 보장.
+		// 게임 일정(08:00~24:00)·세션 전환·KST→UTC 변환이 이 전제에 의존하므로
+		// SpringApplication.run 전(=어떤 빈도 시간 쓰기 전)에 명시적으로 박는다.
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
 		SpringApplication.run(DotwarsApplication.class, args);
 	}
 

@@ -3,7 +3,6 @@
 #
 # 사용:
 #   bash apply-schedule.sh                 # 기본 = update-schedule.sql (본 운영 5/26~28)
-#   bash apply-schedule.sh test            # test-schedule.sql (5/17~19 베타)
 #   bash apply-schedule.sh <SQL_파일명>     # ~/<SQL_파일명> 사용
 set -euo pipefail
 
@@ -11,10 +10,10 @@ set -a
 source /home/ec2-user/app/config/.env.prod
 set +a
 
-# 인자에 따라 SQL 파일 선택. 별칭 "test" / "prod" 처리.
+# 인자에 따라 SQL 파일 선택. 별칭 "prod"/"update" 처리.
+# (베타용 test-schedule.sql 은 베타 종료 후 제거됨 — 2026-05-21)
 ARG="${1:-update-schedule.sql}"
 case "$ARG" in
-    test)        SQL_FILE="$HOME/test-schedule.sql" ;;
     prod|update) SQL_FILE="$HOME/update-schedule.sql" ;;
     /*|./*)      SQL_FILE="$ARG" ;;
     *)           SQL_FILE="$HOME/$ARG" ;;

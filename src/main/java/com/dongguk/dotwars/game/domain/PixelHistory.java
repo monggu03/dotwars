@@ -44,7 +44,7 @@ public class PixelHistory {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    // 좌표는 0..49 범위(50x50). int 면 충분.
+    // 좌표 (현재 캔버스 11×17 → x:0..10, y:0..16). int 면 충분.
     @Column(nullable = false)
     private int x;
 

@@ -53,7 +53,7 @@ dependencies {
 	// Redis 클라이언트 (Lettuce 기본 내장). 캔버스 현재 상태, 쿨다운, Pub/Sub 채널 운반
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-	// WebSocket + STOMP. 50x50 캔버스에 픽셀이 칠해지면 모든 접속자에게 실시간 푸시
+	// WebSocket + STOMP. 캔버스에 픽셀이 칠해지면 모든 접속자에게 실시간 푸시
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
 	// ── 보안 / 인증 ───────────────────────────────────────────────────

@@ -8,7 +8,7 @@
 #  3. 7일 이상 오래된 백업 자동 삭제 (디스크 절약)
 #
 # 호출:
-#  - cron (/etc/cron.d/dotwars-backup) 매일 04:00 자동
+#  - systemd timer (dotwars-backup.timer) 매일 04:00 자동 (AL2023 에 cron 없음)
 #  - 수동 테스트: bash /home/ec2-user/app/scripts/backup-db.sh
 #
 # 복원 방법 (사고 시):

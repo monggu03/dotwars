@@ -29,14 +29,15 @@ public class Game {
     @Column(nullable = false, length = 100)
     private String name;
 
-    // 50 × 50 픽셀. application.yml 의 game.canvas.width/height 와 시드 데이터에서 일치시킴.
+    // 캔버스 크기(현재 11×17). application.yml 의 game.canvas.width/height 와 시드 데이터에서 일치시킴.
     @Column(name = "canvas_width", nullable = false)
     private int canvasWidth;
 
     @Column(name = "canvas_height", nullable = false)
     private int canvasHeight;
 
-    // 픽셀 칠한 사용자가 다시 칠할 수 있을 때까지의 대기 시간(초). 기본 300초(5분).
+    // 픽셀 칠한 사용자가 다시 칠할 수 있을 때까지의 대기 시간(초). 현재 운영값 5초.
+    // (런타임은 @Value("${game.cooldown-seconds}") 가 권위 — 이 필드는 시드/기록용)
     @Column(name = "cooldown_seconds", nullable = false)
     private int cooldownSeconds;
 

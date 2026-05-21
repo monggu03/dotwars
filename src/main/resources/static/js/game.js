@@ -246,8 +246,8 @@ function fillCanvasWhite() {
 }
 
 /**
- * 50x50 격자선 stroke. 매 paint 후 호출되어 픽셀 위로 격자선이 다시 그려짐.
- * 비용: 102 line stroke, microsecond 단위 — 무시 가능.
+ * 11×17 격자선 stroke. 매 paint 후 호출되어 픽셀 위로 격자선이 다시 그려짐.
+ * 비용: 30 line stroke (세로 12 + 가로 18), microsecond 단위 — 무시 가능.
  *
  * .5 오프셋 이유:
  *   Canvas 의 stroke 는 좌표의 양쪽으로 0.5px 씩 그림. 정수 좌표에 stroke 하면
@@ -597,7 +597,7 @@ function setupModalHandlers() {
         if (e.target === els.paintsModal) els.paintsModal.classList.add('hidden');
     });
 
-    // 온보딩 — 첫 진입 시 1회만 표시. 5장 슬라이드, 다음/건너뛰기/스와이프.
+    // 온보딩 — 첫 진입 시 1회만 표시. 6장 슬라이드, 다음/스와이프.
     setupOnboarding();
 }
 
@@ -659,7 +659,7 @@ function renderPaints(data) {
 
 /**
  * 온보딩 슬라이드 컨트롤러.
- *  - 도트 표시 / 다음 버튼 / 건너뛰기 / 스와이프 모두 지원
+ *  - 도트 표시 / 다음 버튼 / 스와이프 모두 지원 (건너뛰기 버튼은 제거됨)
  *  - 마지막 슬라이드에선 CTA 라벨이 "시작!" 으로 변경
  *  - 종료 시 localStorage 'dotwars_tutorial_seen' = '1' 설정
  *

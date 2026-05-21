@@ -29,8 +29,8 @@ import java.util.Map;
  * 시드 항목:
  *  - 진영 5개 (인문/사회/자연/공학/예술)
  *  - 단과대 12개 (각 진영에 매핑)
- *  - 게임 1개 (오늘 16:00 ~ Day3 24:00)
- *  - 게임 세션 3개 (Day 1/2/3, 매일 16:00~24:00)
+ *  - 게임 1개 (오늘 08:00 ~ Day3 24:00)
+ *  - 게임 세션 3개 (Day 1/2/3, 매일 08:00~24:00)
  *
  * 중복 INSERT 방지: 이미 진영이 1개라도 있으면 전체 시드 스킵. ddl-auto: update 가
  * 테이블만 만들어주는 상황에서, 행이 이미 있으면 다시 넣지 않는 멱등성을 보장.
@@ -82,7 +82,7 @@ public class DataInitializer implements ApplicationRunner {
      * Redis 의 game:status 가 없으면 ACTIVE 로 시드.
      *
      * 개발 편의: 부팅 직후 픽셀 칠하기를 바로 테스트하려면 ACTIVE 상태가 필요.
-     * setIfAbsent 사용 — 운영에서는 스케줄러가 16:00 도래 시 ACTIVE 로 전환하지만,
+     * setIfAbsent 사용 — 운영에서는 스케줄러가 08:00 도래 시 ACTIVE 로 전환하지만,
      * 개발 환경에서 매번 재부팅 후 수동으로 SET 할 필요 없도록 idempotent 하게.
      *
      * 운영 단계에서는 이 메서드를 비활성화하거나, 시간 기반 스케줄러로 교체 예정.
@@ -165,7 +165,7 @@ public class DataInitializer implements ApplicationRunner {
         LocalDate today = LocalDate.now();                          // 예: 2026-05-16
         LocalDateTime startsAt = today.atTime(8, 0);                 // 08:00 — 운영 일정과 동일 (2026-05-21 16→08 연장)
         // "Day3 의 24:00" = "Day4 의 00:00" = today + 3일의 자정. plusDays(3).atStartOfDay() 가 정확.
-        LocalDateTime endsAt = today.plusDays(3).atStartOfDay();     // 2026-05-19 00:00
+        LocalDateTime endsAt = today.plusDays(3).atStartOfDay();     // today+3 자정 (= Day3 24:00)
 
         Game game = Game.builder()
                 .name("2026 동국대 축제 픽셀 점령전")

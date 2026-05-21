@@ -101,35 +101,20 @@ async function refreshStatus() {
     tick();
 }
 
-// ── 대기 인원 presence ────────────────────────────────────────────────
-// 대기화면은 WebSocket 을 안 쓰므로(시작 전 핸드셰이크 비용 회피) 별도 핑으로 집계.
-// 방문자 고유 id 를 localStorage 에 보관 → 같은 사람 여러 탭/새로고침은 1명으로.
-let visitorId;
-function getVisitorId() {
-    if (visitorId) return visitorId;
-    try {
-        let id = localStorage.getItem('dotwars_visitor_id');
-        if (!id) {
-            id = crypto.randomUUID();
-            localStorage.setItem('dotwars_visitor_id', id);
-        }
-        visitorId = id;
-    } catch {
-        // private 모드 등 localStorage 차단 시 — 휘발성 id (이번 로드 한정)
-        visitorId = crypto.randomUUID();
-    }
-    return visitorId;
-}
+// ── 대기 인원 ──────────────────────────────────────────────────────────
+// "지금 화면 켜둔 사람(실시간 presence)" 이 아니라 "가입(로그인+단과대 선택)한
+// 누적 인원" 으로 집계 — 친구가 로그인할 때마다 숫자가 올라가고 빠지지 않음.
+// (실시간 presence 는 모바일 백그라운드 타이머 정지 등으로 시작 전엔 거의 1명만 잡힘)
+// participants = userRepository.countByDepartmentIsNotNull() (= /api/stats/online 제공).
 
-// 표시용 기준 인원 — 시작 전 너무 휑해 보이지 않게 25 부터 시작(+ 실제 presence).
-// 실제 집계값(res.waiting)은 API/Redis 에 그대로 정확히 남고, 화면 표시만 부풀린다.
+// 표시용 기준 인원 — 시작 전 너무 휑해 보이지 않게 25 부터 시작(+ 실제 가입자 수).
 const WAITING_BASE = 25;
 
 async function pollWaiting() {
     try {
-        const res = await apiGet(`/api/stats/waiting?v=${encodeURIComponent(getVisitorId())}`);
-        if (res && typeof res.waiting === 'number') {
-            const shown = WAITING_BASE + res.waiting;
+        const res = await apiGet('/api/stats/online');
+        if (res && typeof res.participants === 'number') {
+            const shown = WAITING_BASE + res.participants;
             els.hint.innerHTML = `${FIRE_SVG}현재 ${shown}명 대기 중!`;
         }
     } catch {

@@ -3,13 +3,11 @@ package com.dongguk.dotwars.game.controller;
 import com.dongguk.dotwars.game.dto.FactionStatsResponse;
 import com.dongguk.dotwars.game.repository.PixelHistoryRepository;
 import com.dongguk.dotwars.game.service.FactionStatsService;
-import com.dongguk.dotwars.game.service.WaitingPresenceService;
 import com.dongguk.dotwars.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -26,7 +24,6 @@ public class StatsController {
     private final SimpUserRegistry userRegistry;
     private final UserRepository userRepository;
     private final PixelHistoryRepository pixelHistoryRepository;
-    private final WaitingPresenceService waitingPresenceService;
 
     @GetMapping("/factions")
     public FactionStatsResponse factions() {
@@ -48,16 +45,5 @@ public class StatsController {
                 "participants", userRepository.countByDepartmentIsNotNull(),
                 "paints", pixelHistoryRepository.count()
         );
-    }
-
-    /**
-     * 대기화면 현재 대기 인원. waiting.js 가 10초마다 호출(핑 겸 조회).
-     * WebSocket 을 안 쓰는 대기화면 전용 presence — 자세한 이유는 WaitingPresenceService 참고.
-     *
-     * @param v 클라이언트가 생성한 고유 visitorId (익명 방문자 포함)
-     */
-    @GetMapping("/waiting")
-    public Map<String, Long> waiting(@RequestParam("v") String v) {
-        return Map.of("waiting", waitingPresenceService.touchAndCount(v));
     }
 }

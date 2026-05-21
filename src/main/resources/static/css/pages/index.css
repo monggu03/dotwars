@@ -26,6 +26,12 @@
     font-weight: var(--weight-bold);
     color: var(--faction-natural);   /* 5진영 중 하나 — 고정 */
     letter-spacing: 0.04em;
+    /*
+     * trailing letter-spacing 보정 — 마지막 글자 'S' 뒤에 0.04em 이 붙어
+     * text-align: center 가 그 trailing 까지 포함해 중앙 정렬 → 시각상 살짝 왼쪽 치우침.
+     * text-indent 0.04em 으로 왼쪽에 같은 양 추가 → 글자가 진짜 가운데.
+     */
+    text-indent: 0.04em;
     /* 그라데이션 X, 그림자 X, 외곽선 X — 정직한 단색 */
 }
 

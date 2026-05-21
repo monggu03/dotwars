@@ -1,11 +1,10 @@
 /*
  * game.js — r/place 식 풀스크린 캔버스 게임.
  *
- * 변경 (2026-05-16):
- *  - canvas 해상도 50→500 (셀당 10x10). 매 paint 후 격자선 stroke.
- *  - 확대 시트 제거. 1탭 → pixel-cursor + coord-bar 표시.
- *  - 같은 칸 400ms 이내 재탭 → 페인트 실행.
- *  - window resize 시 panzoom reset → 정중앙 정렬 안정.
+ * 변경 (2026-05-19):
+ *  - 캔버스 11×17 = 187셀로 축소. 모든 폰에 한 눈에 들어옴 (panzoom 제거).
+ *  - panzoom 라이브러리 제거 — 줌/팬 자체가 사라짐. 1탭 선택 → 재탭 페인트 그대로.
+ *  - resize 시 더 이상 panzoom reset 불필요, pixel-cursor 위치만 갱신.
  */
 
 import { apiGet, apiPost, ApiError } from './api.js';
@@ -13,26 +12,27 @@ import { requireLoginWithDepartment } from './auth-guard.js';
 import { connectWebSocket } from './websocket.js';
 
 // ── 상수 ────────────────────────────────────────────────────────
-// 캔버스 그리드 — 4:7 모바일 비율. application.yml 의 game.canvas.* 와 일치 필요.
-const GRID_WIDTH = 12;
-const GRID_HEIGHT = 21;
-const CELL_PX = 30;             // 셀당 캔버스 픽셀 (해상도 360x630)
+// 캔버스 그리드 — 11:17 비율, 187셀. application.yml 의 game.canvas.* 와 일치 필요.
+const GRID_WIDTH = 11;
+const GRID_HEIGHT = 17;
+const CELL_PX = 30;             // 셀당 캔버스 픽셀 (해상도 330x510)
 const CANVAS_W = GRID_WIDTH * CELL_PX;
 const CANVAS_H = GRID_HEIGHT * CELL_PX;
-const GRID_STROKE = 'rgba(0, 0, 0, 0.10)';   // 옅은 회색 격자선
+const GRID_STROKE = 'rgba(0, 0, 0, 0.35)';   // 격자선 — Game Vibrant 팔레트 위에서도 명확히 보임 (2026-05-19)
 // 통계는 WebSocket 으로 안 보내고 폴링 유지 — 부하 크고 실시간성 덜 중요.
 // 3초 → 5초로 늘림 (WebSocket 으로 picks 즉시 갱신되니까 굳이 짧을 필요 없음).
 const STATS_POLL_MS = 5000;
 const COOLDOWN_TICK_MS = 1000;
 const DOUBLE_TAP_WINDOW_MS = 400;   // 같은 칸 재탭으로 인정하는 시간 창
 
+// Game Vibrant 팔레트 (2026-05-19) — DB factions.color_hex / tokens.css 와 반드시 동기화.
 const FACTION_COLORS = {
     0: '#FFFFFF',
-    1: '#FF7F0E',
-    2: '#D62728',
-    3: '#2CA02C',
-    4: '#1F77B4',
-    5: '#9467BD',
+    1: '#FFA040',   // 인문 주황
+    2: '#F04545',   // 사회 빨강
+    3: '#43D043',   // 자연 초록
+    4: '#3DA8DE',   // 공학 파랑
+    5: '#B08AE0',   // 예술 보라
 };
 
 // ── DOM ─────────────────────────────────────────────────────────
@@ -48,8 +48,16 @@ const els = {
     cancelSelect: $('cancel-select'),
     myFactionDot: $('my-faction-dot'),
     myFactionName: $('my-faction-name'),
-    myRank: $('my-rank'),    // 클릭 시 stats 모달 열림 (FAB 대체)
+    // 마이페이지(내 픽셀 발자취) 모달
+    myFactionBtn: $('my-faction-btn'),
+    paintsModal: $('paints-modal'),
+    closePaints: $('close-paints'),
+    paintsSummary: $('paints-summary'),
+    paintsList: $('paints-list'),
+    paintsMeta: $('paints-meta'),
     cooldown: $('cooldown-timer'),
+    // 상단 진영 점유율 막대 — 미니바 대체. 탭=모달.
+    factionBar: $('faction-bar'),
     statsModal: $('stats-modal'),
     closeStats: $('close-stats'),
     statsList: $('stats-list'),
@@ -59,7 +67,6 @@ const els = {
 // ── 모듈 상태 ────────────────────────────────────────────────────
 let me = null;
 let ctx = null;
-let panzoomInstance = null;
 let cooldownEndsAt = null;
 // 더블탭 감지 — 마지막 1탭의 좌표와 시각
 let lastTap = { x: -1, y: -1, time: 0 };
@@ -102,10 +109,10 @@ async function init() {
         loadStats(),
     ]);
 
-    setupPanzoom();
     setupTapHandler();
     setupModalHandlers();
     setupResizeHandler();
+    showTutorialIfFirstTime();
 
     // ── WebSocket 연결 ──────────────────────────────────────────
     // 캔버스 초기 로드 후 실시간 수신 시작 → 다른 사람이 칠한 픽셀이 1초 이내 화면에 반영.
@@ -135,6 +142,98 @@ async function init() {
 
     setInterval(tickCooldownDisplay, COOLDOWN_TICK_MS);
     setInterval(pollStats, STATS_POLL_MS);
+    startTicker();
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  하단 ticker — 접속자 수 / 1위 진영 / 칠해진 칸 수 순환
+// ─────────────────────────────────────────────────────────────────
+
+/** ticker 회전 주기 (ms). 너무 짧으면 못 읽고, 너무 길면 지루. */
+const TICKER_ROTATE_MS = 3000;
+/** 접속자 수 폴링 주기. */
+const ONLINE_POLL_MS = 10000;
+/** slide-out → 텍스트 swap → slide-in 사이 텀. CSS 의 animation 시간(0.4s)과 일치. */
+const TICKER_FADE_MS = 400;
+
+let tickerStats = null;
+let tickerOnline = { online: 0, participants: 0, paints: 0 };
+let tickerIndex = 0;
+
+async function refreshTickerOnline() {
+    try {
+        const data = await apiGet('/api/stats/online');
+        tickerOnline = {
+            online: Number(data.online ?? 0),
+            participants: Number(data.participants ?? 0),
+            paints: Number(data.paints ?? 0),
+        };
+    } catch (_) { /* 무시 — 다음 폴링에서 재시도 */ }
+}
+
+/**
+ * 현재 데이터로 보여줄 메시지 배열 빌드.
+ * 데이터 부족하면 해당 메시지 빠짐. 빈 배열이면 ticker 표시 X.
+ */
+function buildTickerMessages() {
+    const msgs = [];
+    if (tickerOnline.online > 0) {
+        msgs.push(`현재 ${tickerOnline.online}명 접속 중!`);
+    }
+    if (tickerStats?.factions?.length > 0) {
+        const leader = tickerStats.factions.find((f) => f.rank === 1);
+        if (leader && leader.pixelCount > 0) {
+            msgs.push(`${leader.name} 1위!`);
+        }
+    }
+    if (tickerOnline.participants > 0) {
+        msgs.push(`지금까지 ${tickerOnline.participants}명 참여!`);
+    }
+    if (tickerOnline.paints > 0) {
+        msgs.push(`총 ${tickerOnline.paints}번 칠해졌어요`);
+    }
+    return msgs;
+}
+
+function startTicker() {
+    const el = document.getElementById('ticker-text');
+    if (!el) return;
+
+    const tick = () => {
+        const msgs = buildTickerMessages();
+        if (msgs.length === 0) return;
+        const msg = msgs[tickerIndex % msgs.length];
+        tickerIndex += 1;
+
+        el.classList.remove('is-entering');
+        el.classList.add('is-leaving');
+        setTimeout(() => {
+            el.textContent = msg;
+            el.classList.remove('is-leaving');
+            el.classList.add('is-entering');
+        }, TICKER_FADE_MS);
+    };
+
+    // 첫 진입 — 데이터 받자마자 첫 메시지 즉시 표시 (애니메이션 없이)
+    const firstShow = () => {
+        const msgs = buildTickerMessages();
+        if (msgs.length === 0) return;
+        el.textContent = msgs[0];
+        el.classList.add('is-entering');
+        tickerIndex = 1;
+    };
+
+    // 데이터 fetch + 첫 표시
+    refreshTickerOnline().then(() => {
+        // pollStats() 가 5초마다 tickerStats 를 갱신할 거지만, 초기엔 직접 한 번 가져옴
+        apiGet('/api/stats/factions').then((data) => {
+            tickerStats = data;
+            firstShow();
+        }).catch(() => {});
+    });
+
+    setInterval(refreshTickerOnline, ONLINE_POLL_MS);
+    setInterval(tick, TICKER_ROTATE_MS);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -184,10 +283,14 @@ async function loadCanvas() {
     drawGrid();   // 모든 픽셀 위에 격자선 한 번
 }
 
-/** 셀(x,y)을 색상으로 채움. 격자는 별도로 다시 그려야 함. */
+/**
+ * 셀(x,y)을 색상으로 채움.
+ * 좌상단 1px 만 비워 격자선 보존 (다음 셀의 좌측·상단 grid 는 그쪽 셀이 비움) — 29×29 채움.
+ * 결과: 셀 사이에 정확히 1px 격자선 하나만 보임, 추가 여백 없음. 어떤 색 위에서도 격자 또렷.
+ */
 function fillCell(x, y, color) {
     ctx.fillStyle = color;
-    ctx.fillRect(x * CELL_PX, y * CELL_PX, CELL_PX, CELL_PX);
+    ctx.fillRect(x * CELL_PX + 1, y * CELL_PX + 1, CELL_PX - 1, CELL_PX - 1);
 }
 
 /**
@@ -222,29 +325,12 @@ function flushPaintQueue() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  panzoom 설정 + 리사이즈
+//  리사이즈 핸들러
 // ─────────────────────────────────────────────────────────────────
 
-function setupPanzoom() {
-    panzoomInstance = window.Panzoom(els.wrapper, {
-        minScale: 1,
-        maxScale: 16,
-        contain: 'outside',
-        cursor: 'crosshair',
-        animate: false,
-    });
-
-    els.stage.addEventListener('wheel', (e) => {
-        panzoomInstance.zoomWithWheel(e);
-    });
-}
-
 /**
- * window resize 시 panzoom 의 transform 을 초기 상태로 reset → 캔버스가 정중앙 유지.
- * 사용자 보고: "윈도우 조절할 때마다 쏠려있다" → resize 시 자동 정렬 회복.
- *
- * RAF 디바운스:
- *   리사이즈 중 매 프레임 reset 호출이 누적되는 걸 막음.
+ * window resize 시 pixel-cursor 위치만 재계산.
+ * panzoom 제거됐으므로 transform reset 없음. wrapper 는 CSS 가 알아서 fluid 리사이즈.
  */
 function setupResizeHandler() {
     let resizeRaf = null;
@@ -252,7 +338,6 @@ function setupResizeHandler() {
         if (resizeRaf) return;
         resizeRaf = requestAnimationFrame(() => {
             resizeRaf = null;
-            panzoomInstance?.reset({ animate: false });
             if (selected) updateCursor(selected.x, selected.y);
         });
     });
@@ -290,8 +375,7 @@ function onCanvasClick(e) {
 }
 
 function clientToCell(clientX, clientY) {
-    // canvas 의 화면상 영역 → 50x50 셀 좌표.
-    // panzoom 의 transform 도 getBoundingClientRect() 에 반영되므로 비례 계산만으로 정확.
+    // canvas 의 화면상 영역 → 11×17 셀 좌표. getBoundingClientRect() 는 실제 렌더 크기 반환.
     const rect = els.canvas.getBoundingClientRect();
     const sx = GRID_WIDTH / rect.width;
     const sy = GRID_HEIGHT / rect.height;
@@ -357,6 +441,17 @@ async function paintPixel(x, y) {
 //  통계 (전체 순위 모달)
 // ─────────────────────────────────────────────────────────────────
 
+/**
+ * 1 → 1st, 2 → 2nd, 3 → 3rd, 그 외 → Nth.
+ * 한국어 "위" 는 픽셀 폰트(DOSGothic/Press Start 2P)에 한글 글리프 없어 fallback 됨 — 영어 ordinal 로 일관된 픽셀 룩.
+ */
+function ordinal(n) {
+    if (n === 1) return '1st';
+    if (n === 2) return '2nd';
+    if (n === 3) return '3rd';
+    return `${n}th`;
+}
+
 async function loadStats() {
     try {
         const data = await apiGet('/api/stats/factions');
@@ -367,11 +462,11 @@ async function loadStats() {
 }
 
 function renderStats(data) {
-    const mine = data.factions.find((f) => f.id === me.faction.id);
-    if (mine) {
-        els.myRank.textContent = `${mine.rank}위`;
-    }
+    // ── 상단 점유율 막대 ──────────────────────────────────────────
+    // 큰 진영부터 왼쪽으로 정렬. 0% 진영은 숨김. 마지막에 흰 픽셀(미점령).
+    renderFactionBar(data);
 
+    // ── 모달 리스트 (탭 시 열림) ─────────────────────────────────
     els.statsList.innerHTML = data.factions
         .map((f) => {
             const isMine = f.id === me.faction.id ? ' is-mine' : '';
@@ -379,7 +474,7 @@ function renderStats(data) {
                 <li class="stat-item${isMine}" style="--faction-color: ${f.colorHex}">
                     <span class="stat-item__dot"></span>
                     <span class="stat-item__name">${f.name}</span>
-                    <span class="stat-item__rank font-pixel">${f.rank}위</span>
+                    <span class="stat-item__rank font-pixel">${ordinal(f.rank)}</span>
                     <span class="stat-item__pct font-pixel">${f.percentage.toFixed(1)}%</span>
                 </li>
             `;
@@ -389,6 +484,35 @@ function renderStats(data) {
     els.statsMeta.textContent =
         `칠해진 픽셀 ${data.totalPixels - data.whitePixels} / ${data.totalPixels}` +
         ` · ${new Date(data.calculatedAt).toLocaleTimeString('ko-KR')} 기준`;
+}
+
+/**
+ * 진영 점유율 막대 렌더 — flex 컨테이너에 세그먼트 div 채움.
+ * 정렬: pixelCount 큰 진영부터 왼쪽. 마지막 세그먼트는 흰 픽셀. 0% 진영은 생략.
+ * 막대 자체가 모달 트리거이므로 세그먼트별 데이터는 따로 안 붙임.
+ */
+function renderFactionBar(data) {
+    const bar = els.factionBar;
+    bar.innerHTML = '';
+    const total = data.totalPixels;
+    if (total <= 0) return;
+
+    const sorted = [...data.factions].sort((a, b) => b.pixelCount - a.pixelCount);
+    for (const f of sorted) {
+        if (f.pixelCount === 0) continue;
+        const seg = document.createElement('div');
+        seg.className = 'faction-bar__segment';
+        seg.style.flexBasis = `${(f.pixelCount / total) * 100}%`;
+        seg.style.background = f.colorHex;
+        bar.appendChild(seg);
+    }
+    if (data.whitePixels > 0) {
+        const white = document.createElement('div');
+        white.className = 'faction-bar__segment';
+        white.style.flexBasis = `${(data.whitePixels / total) * 100}%`;
+        white.style.background = 'var(--white-canvas)';
+        bar.appendChild(white);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -444,6 +568,7 @@ function tickCooldownDisplay() {
 async function pollStats() {
     try {
         const stats = await apiGet('/api/stats/factions');
+        tickerStats = stats;  // ticker 도 같은 데이터 사용
         renderStats(stats);
     } catch (e) {
         console.warn('[poll] stats 실패', e);
@@ -455,16 +580,171 @@ async function pollStats() {
 // ─────────────────────────────────────────────────────────────────
 
 function setupModalHandlers() {
-    // 미니바의 "K위" 텍스트가 곧 모달 트리거. 별도 순위 버튼 없음.
-    els.myRank.addEventListener('click', () => {
-        loadStats();
-        els.statsModal.classList.remove('hidden');
-    });
+    // 상단 진영 막대가 곧 모달 트리거.
+    setupFactionBarInteraction();
+
     els.closeStats.addEventListener('click', () => {
         els.statsModal.classList.add('hidden');
     });
     els.statsModal.addEventListener('click', (e) => {
         if (e.target === els.statsModal) els.statsModal.classList.add('hidden');
+    });
+
+    // 마이페이지(내 픽셀 발자취) — status-bar 의 내 진영 탭 시 모달 열림
+    els.myFactionBtn?.addEventListener('click', openPaintsModal);
+    els.closePaints?.addEventListener('click', () => els.paintsModal.classList.add('hidden'));
+    els.paintsModal?.addEventListener('click', (e) => {
+        if (e.target === els.paintsModal) els.paintsModal.classList.add('hidden');
+    });
+
+    // 온보딩 — 첫 진입 시 1회만 표시. 5장 슬라이드, 다음/건너뛰기/스와이프.
+    setupOnboarding();
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  마이페이지 — 본인 페인트 이력
+// ─────────────────────────────────────────────────────────────────
+
+async function openPaintsModal() {
+    els.paintsModal.classList.remove('hidden');
+    els.paintsList.innerHTML = '<li class="paints-empty">로딩 중…</li>';
+    els.paintsMeta.textContent = '';
+    try {
+        const data = await apiGet('/api/users/me/paints');
+        renderPaints(data);
+    } catch (e) {
+        console.warn('[paints] 로드 실패', e);
+        els.paintsList.innerHTML = '<li class="paints-empty">불러올 수 없습니다.</li>';
+    }
+}
+
+function renderPaints(data) {
+    // 요약 카드 — 진영색 좌측 라인 + 진영명 + 총 페인트 수
+    const color = data.factionColorHex || 'var(--text-tertiary)';
+    els.paintsSummary.style.setProperty('--faction-color', color);
+    els.paintsSummary.innerHTML = `
+        <span class="faction-color-dot" style="background: ${color}" aria-hidden="true"></span>
+        <span class="paints-summary__faction font-pixel">${data.factionName ?? '미선택'}</span>
+        <span class="paints-summary__count">총 ${data.totalPaints}개</span>
+    `;
+
+    if (!data.paints || data.paints.length === 0) {
+        els.paintsList.innerHTML = '<li class="paints-empty">아직 칠한 픽셀이 없어요.<br>한 칸 칠해보세요!</li>';
+        els.paintsMeta.textContent = '';
+        return;
+    }
+
+    els.paintsList.innerHTML = data.paints.map((p) => {
+        const dt = new Date(p.paintedAt);
+        const time = dt.toLocaleTimeString('ko-KR', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+        });
+        const date = `${dt.getMonth() + 1}/${dt.getDate()}`;
+        const cls = p.alive ? 'is-alive' : 'is-dead';
+        // 살아있음 ✓ / 덮임 ✗ — 픽셀 폰트의 화살표 대용
+        const icon = p.alive ? '✓' : '✗';
+        return `
+            <li class="paint-item">
+                <span class="paint-item__status ${cls}" aria-label="${p.alive ? '살아있음' : '덮였음'}">${icon}</span>
+                <span class="paint-item__coord">(${p.x},${p.y})</span>
+                <span class="paint-item__time">${date} ${time}</span>
+            </li>
+        `;
+    }).join('');
+
+    const aliveCount = data.paints.filter((p) => p.alive).length;
+    els.paintsMeta.textContent =
+        `최근 ${data.paints.length}개 중 ${aliveCount}개가 아직 내 색입니다`;
+}
+
+/**
+ * 온보딩 슬라이드 컨트롤러.
+ *  - 도트 표시 / 다음 버튼 / 건너뛰기 / 스와이프 모두 지원
+ *  - 마지막 슬라이드에선 CTA 라벨이 "시작!" 으로 변경
+ *  - 종료 시 localStorage 'dotwars_tutorial_seen' = '1' 설정
+ *
+ * Private/Incognito 모드에서 localStorage 차단 시 매번 보임 (수용 가능).
+ */
+function setupOnboarding() {
+    const root = document.getElementById('onboarding');
+    if (!root) return;
+
+    const slides = document.getElementById('onboarding-slides');
+    const dots = document.querySelectorAll('#onboarding-dots .onboarding__dot');
+    const cta = document.getElementById('onboarding-cta');
+
+    const TOTAL = dots.length;
+    let index = 0;
+
+    const update = () => {
+        slides.style.transform = `translateX(-${index * 100}%)`;
+        dots.forEach((d, i) => d.classList.toggle('is-active', i === index));
+        cta.textContent = (index === TOTAL - 1) ? '시작!' : '다음 →';
+    };
+
+    const finish = () => {
+        root.classList.add('hidden');
+        try { localStorage.setItem('dotwars_tutorial_seen', '1'); } catch (_) {}
+    };
+
+    cta.addEventListener('click', () => {
+        if (index < TOTAL - 1) { index += 1; update(); }
+        else { finish(); }
+    });
+
+    // 도트 직접 클릭 — 해당 슬라이드로 점프 (다른 앱 패턴)
+    dots.forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+            index = i;
+            update();
+        });
+    });
+
+    // ── 가로 스와이프 (touch) ──────────────────────────────────────
+    const SWIPE_THRESHOLD_PX = 50;
+    let touchStartX = null;
+    root.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    root.addEventListener('touchend', (e) => {
+        if (touchStartX === null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        touchStartX = null;
+        if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+        if (dx < 0 && index < TOTAL - 1) { index += 1; update(); }
+        else if (dx > 0 && index > 0)    { index -= 1; update(); }
+    }, { passive: true });
+
+    update();
+}
+
+/**
+ * 온보딩 — 첫 진입 시 1회만 표시.
+ * localStorage 'dotwars_tutorial_seen' === '1' 이면 스킵.
+ */
+function showTutorialIfFirstTime() {
+    let seen = false;
+    try { seen = localStorage.getItem('dotwars_tutorial_seen') === '1'; } catch (_) {}
+    if (seen) return;
+    document.getElementById('onboarding')?.classList.remove('hidden');
+}
+
+/**
+ * 진영 막대 인터랙션 — 단순. 탭/클릭/Enter/Space → 전체 순위 모달.
+ * 이전엔 짧은탭/꾹누름 구분했으나 짧은탭이 일부 폰에서 작동 안 함 + 진영별 툴팁이 활용도 낮음 → 단순화 (2026-05-19).
+ */
+function setupFactionBarInteraction() {
+    const openModal = () => {
+        loadStats();
+        els.statsModal.classList.remove('hidden');
+    };
+    els.factionBar.addEventListener('click', openModal);
+    els.factionBar.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openModal();
+        }
     });
 }
 

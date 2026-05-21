@@ -23,6 +23,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByKakaoId(Long kakaoId);
 
+    /** 단과대(=진영) 선택을 완료한 사용자 수 — 게임에 "참여한" 누적 인원 */
+    long countByDepartmentIsNotNull();
+
     /**
      * 사용자 + 단과대 + 진영을 한 쿼리로 fetch join.
      *

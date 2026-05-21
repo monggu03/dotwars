@@ -5,12 +5,12 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0A0A0A">
-    <title>dotwars</title>
+    <title>동국대학교 봄 대동제 픽셀 점령전</title>
 
     <!-- Open Graph — 카카오톡/SNS 미리보기 (index.html 참고) -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="dotwars — 동국대학교 픽셀 점령전">
-    <meta property="og:description" content="5분에 1픽셀, 3일 동안 50×50 캔버스를 단과대 진영색으로 점령하세요.">
+    <meta property="og:title" content="동국대학교 봄 대동제 픽셀 점령전">
+    <meta property="og:description" content="내 단과대 색깔로 3일 동안 캔버스를 점령하세요!">
     <meta property="og:url" content="https://dotwars.kr/game.html">
     <meta property="og:image" content="https://dotwars.kr/images/og-image.png">
     <meta property="og:image:width" content="1488">
@@ -18,8 +18,8 @@
     <meta property="og:locale" content="ko_KR">
     <meta property="og:site_name" content="dotwars">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="dotwars — 동국대학교 픽셀 점령전">
-    <meta name="twitter:description" content="5분에 1픽셀, 3일 동안 50×50 캔버스를 단과대 진영색으로 점령하세요.">
+    <meta name="twitter:title" content="동국대학교 봄 대동제 픽셀 점령전">
+    <meta name="twitter:description" content="내 단과대 색깔로 3일 동안 캔버스를 점령하세요!">
     <meta name="twitter:image" content="https://dotwars.kr/images/og-image.png">
 
     <link rel="stylesheet"
@@ -36,43 +36,62 @@
 </head>
 <body>
 
-<!-- ── 상단 미니바 ───────────────────────────────────────────────── -->
-<header class="minibar">
-    <div class="minibar__left">
-        <span class="faction-color-dot" id="my-faction-dot" aria-hidden="true"></span>
-        <span class="font-pixel" id="my-faction-name">--</span>
-        <!-- 순위 텍스트가 곧 모달 트리거 — 별도 FAB 버튼 없음. -->
-        <button class="minibar__rank font-pixel" id="my-rank" type="button" aria-label="전체 순위 보기">
-            --위
-        </button>
-    </div>
-    <div class="minibar__right">
-        <span class="cooldown-timer font-pixel" id="cooldown-timer">--:--</span>
-    </div>
-</header>
+<!--
+  ── 상단 진영 점유율 막대 ─────────────────────────────────────────
+  미니바 대체. 5진영 + 흰 픽셀 비율을 한 줄로 시각화.
+  - 탭/클릭 → 전체 순위 모달 (#stats-modal)
+  세그먼트는 game.js renderStats() 에서 5초 폴링마다 갱신.
+-->
+<div class="faction-bar" id="faction-bar" role="button" tabindex="0"
+     aria-label="진영별 점유율 — 누르면 전체 순위">
+    <!-- 세그먼트는 JS 가 채움 -->
+</div>
 
 <!-- ── 캔버스 영역 ────────────────────────────────────────────────── -->
 <!--
-  canvas 해상도 = 500x500 (50 픽셀 × 10 px/cell).
-  각 픽셀은 10x10 으로 그려지고, 매 그림 후 1px 격자선이 위에 stroke 됨 → r/place 식 그리드.
-  image-rendering: pixelated 로 어떤 줌 배율에서도 또렷한 정사각형 유지.
+  canvas bitmap = 330×510 (11×17 셀 × 30px). image-rendering: pixelated 로 디바이스에 맞춰 스케일.
+  panzoom 제거 (2026-05-19) — 캔버스가 모든 폰에 한 눈에 들어오므로 줌/팬 불필요.
 -->
 <main class="canvas-stage" id="canvas-stage">
     <div class="canvas-wrapper" id="canvas-wrapper">
-        <canvas id="game-canvas" width="360" height="630"
-                aria-label="12x21 픽셀 캔버스"></canvas>
+        <canvas id="game-canvas" width="330" height="510"
+                aria-label="11x17 픽셀 캔버스"></canvas>
         <!--
           픽셀 커서 — 사용자가 1탭 선택한 칸을 강조하는 overlay.
-          wrapper 안에 absolute 배치되어 panzoom 의 transform 따라 함께 변환.
-          width/height 는 cell 1개 크기 (2%) → CSS 계산.
+          wrapper 안에 absolute 배치. width/height 는 cell 1개 크기 → CSS calc.
         -->
         <div class="pixel-cursor" id="pixel-cursor" aria-hidden="true"></div>
     </div>
 </main>
 
 <!--
-  ── 하단 좌표 바 ─────────────────────────────────────────────────
-  사용자가 픽셀 1탭 선택 시 화면 하단에서 슬라이드업.
+  ── 하단 상태 바 (구 minibar 의 잔재) ─────────────────────────────
+  미니바를 상단 막대로 대체했기 때문에 "내 진영"/"쿨다운" 표시 자리가 여기.
+  - 좌측: 내 진영 색점 + 이름 (내가 어느 색으로 칠하는지 확인)
+  - 우측: 쿨다운 (READY 또는 mm:ss)
+  - 내 순위는 일부러 안 넣음 — 막대로 시각적 위치가 보이고, 정확한 K위는 모달 또는 내 진영 막대 꾹 눌러 확인.
+-->
+<footer class="status-bar">
+    <!-- 내 진영 영역 탭 → 마이페이지(픽셀 발자취) 모달. button 으로 만들어 키보드/스크린리더 접근 가능. -->
+    <button class="status-bar__left" id="my-faction-btn" type="button" aria-label="내 픽셀 보기">
+        <span class="faction-color-dot" id="my-faction-dot" aria-hidden="true"></span>
+        <span class="font-pixel" id="my-faction-name">--</span>
+    </button>
+    <!--
+      중앙 ticker — 접속자 수 / 1위 진영 / 칠해진 칸 수 등 메시지가 3초마다 위로 슬라이드.
+      비어있는 상태부터 시작해서 JS 가 첫 데이터 받자마자 첫 메시지 표시.
+    -->
+    <div class="status-bar__ticker" aria-live="polite" aria-atomic="true">
+        <span class="status-bar__ticker-text" id="ticker-text"></span>
+    </div>
+    <div class="status-bar__right">
+        <span class="cooldown-timer font-pixel" id="cooldown-timer">--:--</span>
+    </div>
+</footer>
+
+<!--
+  ── 좌표 바 (선택 시 슬라이드업) ─────────────────────────────────
+  사용자가 픽셀 1탭 선택 시 status-bar 위로 슬라이드업.
   - 좌표 (x,y) 표시
   - "다시 누르면 칠해져요" 안내
   - 우측 ×: 선택 해제
@@ -90,11 +109,112 @@
     </button>
 </div>
 
+<!-- ── 첫 진입 온보딩 (5장 슬라이드) ─────────────────────────────────
+  localStorage 'dotwars_tutorial_seen' === '1' 이면 안 띄움.
+  이미지 슬롯: /images/tutorial-1.png ~ tutorial-5.png (없으면 placeholder 박스).
+  네비게이션: 우측 [건너뛰기] / 하단 도트 / 풀폭 [다음 →] / 마지막 [시작!].
+-->
+<div class="onboarding hidden" id="onboarding" role="dialog" aria-modal="true" aria-label="dotwars 게임 방법">
+    <div class="onboarding__viewport">
+        <div class="onboarding__slides" id="onboarding-slides">
+            <!-- 슬라이드 1 — 컨셉 -->
+            <section class="onboarding__slide">
+                <div class="onboarding__image">
+                    <img src="/images/tutorial-1.png" alt="" onerror="this.style.display='none'">
+                </div>
+                <h2 class="onboarding__title">동국대 픽셀점령전</h2>
+                <p class="onboarding__body">5개 진영이 한 캔버스에서 펼치는 3일간의 전투.<br>내 단과대 색으로 더 많이 칠해보자.</p>
+            </section>
+
+            <!-- 슬라이드 2 — 칠하는 법 -->
+            <section class="onboarding__slide">
+                <div class="onboarding__image">
+                    <img src="/images/tutorial-2.png" alt="" onerror="this.style.display='none'">
+                </div>
+                <h2 class="onboarding__title">두 번 탭해서 칠하기</h2>
+                <p class="onboarding__body">칸을 탭하면 선택돼요.<br>더블 클릭하면 내 진영 색으로 칠해져요.</p>
+            </section>
+
+            <!-- 슬라이드 3 — 쿨다운 -->
+            <section class="onboarding__slide">
+                <div class="onboarding__image">
+                    <img src="/images/tutorial-3.png" alt="" onerror="this.style.display='none'">
+                </div>
+                <h2 class="onboarding__title">5초 쿨다운</h2>
+                <p class="onboarding__body">한 번 칠하면 5초 후에 다음 칸을 칠할 수 있어요.<br>화면 하단 타이머로 확인하세요.</p>
+            </section>
+
+            <!-- 슬라이드 4 — 나의 진영 (신규) -->
+            <section class="onboarding__slide">
+                <div class="onboarding__image">
+                    <img src="/images/tutorial-4.png" alt="" onerror="this.style.display='none'">
+                </div>
+                <h2 class="onboarding__title">나의 진영</h2>
+                <p class="onboarding__body">좌측하단 나의 진영을 눌러보세요!<br>내가 칠한 픽셀 기록을 볼 수 있어요</p>
+            </section>
+
+            <!-- 슬라이드 5 — 점유율 막대 -->
+            <section class="onboarding__slide">
+                <div class="onboarding__image">
+                    <img src="/images/tutorial-5.png" alt="" onerror="this.style.display='none'">
+                </div>
+                <h2 class="onboarding__title">실시간 점유율</h2>
+                <p class="onboarding__body">상단 막대로 진영 별 점유율을 한눈에.<br>탭하면 전체 순위가 열려요.</p>
+            </section>
+
+            <!-- 슬라이드 6 — 일정 + CTA -->
+            <section class="onboarding__slide">
+                <div class="onboarding__image">
+                    <img src="/images/tutorial-6.png" alt="" onerror="this.style.display='none'">
+                </div>
+                <h2 class="onboarding__title">지금 시작!</h2>
+                <p class="onboarding__body">매일 16시부터 24시까지, 3일간 누적돼요.<br>친구들 다 불러서 우리 진영 1위로!</p>
+            </section>
+        </div>
+    </div>
+
+    <div class="onboarding__dots" id="onboarding-dots" role="tablist">
+        <button class="onboarding__dot is-active" type="button" aria-label="1번 슬라이드"></button>
+        <button class="onboarding__dot" type="button" aria-label="2번 슬라이드"></button>
+        <button class="onboarding__dot" type="button" aria-label="3번 슬라이드"></button>
+        <button class="onboarding__dot" type="button" aria-label="4번 슬라이드"></button>
+        <button class="onboarding__dot" type="button" aria-label="5번 슬라이드"></button>
+        <button class="onboarding__dot" type="button" aria-label="6번 슬라이드"></button>
+    </div>
+
+    <button class="btn btn-primary onboarding__cta" id="onboarding-cta" type="button">
+        다음 →
+    </button>
+</div>
+
+<!-- ── 마이페이지 모달 (내 픽셀 발자취) ──────────────────────────── -->
+<div class="modal-overlay hidden" id="paints-modal" role="dialog" aria-modal="true" aria-labelledby="paints-title">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2 id="paints-title" class="font-pixel">나의 픽셀</h2>
+            <button class="modal-close" id="close-paints" type="button" aria-label="닫기">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6L18 18 M18 6L6 18" stroke-linecap="square"/>
+                </svg>
+            </button>
+        </header>
+        <div class="modal-body">
+            <!-- 진영 + 누적 카운트 -->
+            <div class="paints-summary" id="paints-summary">
+                <span class="paints-summary__faction font-pixel">로딩 중…</span>
+            </div>
+            <!-- 최근 50개 페인트 리스트 -->
+            <ul class="paints-list" id="paints-list"></ul>
+            <p class="paints-meta" id="paints-meta"></p>
+        </div>
+    </div>
+</div>
+
 <!-- ── 전체 순위 모달 ────────────────────────────────────────────── -->
 <div class="modal-overlay hidden" id="stats-modal" role="dialog" aria-modal="true" aria-labelledby="stats-title">
     <div class="modal-content">
         <header class="modal-header">
-            <h2 id="stats-title" class="font-pixel">진영 순위</h2>
+            <h2 id="stats-title" class="font-pixel">실시간영역</h2>
             <button class="modal-close" id="close-stats" type="button" aria-label="닫기">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M6 6L18 18 M18 6L6 18" stroke-linecap="square"/>
@@ -108,7 +228,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 <!-- SockJS + STOMP — WebSocket 실시간 브로드캐스트.
      UMD 빌드라 window.SockJS / window.StompJs 글로벌로 노출. -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>

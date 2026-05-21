@@ -84,15 +84,23 @@
 
 .rules-item__num {
     color: var(--text-tertiary);
-    font-size: var(--text-sm);
+    /* "01" 과 head "캔버스 11×17" 시각 높이 맞추기 — 같은 font-size + 동일 line-height */
+    font-size: var(--text-base);
+    line-height: 1.2;
     letter-spacing: 0.05em;
     align-self: start;
+}
+
+.rules-item__head {
+    /* num 과 같은 line-height 로 시각 baseline 맞춤 */
+    line-height: 1.2;
 }
 
 .rules-item__body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    /* head 와 desc 사이 8px 간격 — 4px 은 너무 빡빡해서 두 문장이 붙어 보임 */
+    gap: var(--space-2);
     min-width: 0;
 }
 
@@ -117,10 +125,13 @@
 }
 
 .faction-card {
-    display: grid;
-    grid-template-columns: 14px 1fr;
-    align-items: start;
-    gap: var(--space-3);
+    /*
+     * flex column — 상단 row(점+이름) 가 정렬된 1줄, 그 아래 단과대 목록.
+     * 이전엔 grid 로 했지만 점과 이름의 시각 baseline 이 어긋났어 flex row 로 align-items: center.
+     */
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
     padding: var(--space-4);
     background: var(--bg-elevated);
     border: 1px solid var(--border-default);
@@ -128,17 +139,18 @@
     border-radius: var(--radius-md);
 }
 
-.faction-card__dot {
-    width: 14px;
-    height: 14px;
-    background: var(--faction-color, var(--text-secondary));
-    margin-top: 2px;
+.faction-card__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
 }
 
-.faction-card__body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+.faction-card__dot {
+    /* 16×16 — 진영명 (text-base 16px) 와 동일 시각 높이 */
+    width: 16px;
+    height: 16px;
+    background: var(--faction-color, var(--text-secondary));
+    flex-shrink: 0;
 }
 
 .faction-card__name {
@@ -146,6 +158,13 @@
     color: var(--text-primary);
     font-size: var(--text-base);
     letter-spacing: 0.04em;
+    line-height: 1;
+    /*
+     * 픽셀 폰트(Press Start 2P) + 한글 monospace fallback 의 글리프가 em-box 상단에 ascender 빈 공간을
+     * 두고 그려져서, align-items: center 정렬해도 시각적으로 점보다 약간 아래로 처짐.
+     * translateY(-2px) 로 위로 보정 (레이아웃에는 영향 없음).
+     */
+    transform: translateY(-2px);
 }
 
 .faction-card__departments {

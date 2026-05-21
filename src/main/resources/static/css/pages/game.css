@@ -6,16 +6,16 @@
  *  - 1탭 선택 → 같은 칸 재탭(400ms 이내) 페인트 인터랙션.
  *  - canvas 해상도 500x500 + 매 paint 후 격자선 stroke → r/place 식 그리드.
  *
- * 레이아웃:
+ * 레이아웃 (2026-05-19 미니바 제거, 진영 막대로 대체):
  *   ┌────────────────────────────────┐
- *   │ minibar (sticky, blur)         │
+ *   │ faction-bar (5진영 + 흰 픽셀)  │  ← 짧은탭=모달 / 꾹누름=툴팁
  *   ├────────────────────────────────┤
  *   │                                │
- *   │      canvas (정중앙, 정사각)    │
+ *   │     canvas (4:7, 12×21)       │
  *   │                                │
  *   ├────────────────────────────────┤
- *   │ coord-bar (선택 시에만 표시)   │
- *   │                          [순위]│
+ *   │ coord-bar (선택 시만, 위에)    │
+ *   │ status-bar: ●진영명    READY  │  ← 항상 표시
  *   └────────────────────────────────┘
  */
 
@@ -23,27 +23,68 @@ body {
     background: var(--bg-base);
 }
 
-/* ── 미니바 ────────────────────────────────────────────────────── */
-
-.minibar {
+/* ── 상단 진영 점유율 막대 ────────────────────────────────────── */
+/*
+ * 5진영 + 흰 픽셀 비율을 1줄 가로 막대로 보여줌. 미니바를 대체.
+ * 탭/클릭 → 전체 순위 모달. 높이 32px.
+ */
+.faction-bar {
     position: fixed;
     top: 0;
-    /* 480px 컬럼 안에서 가운데 정렬 — 다른 페이지(index/select/game-end) 의 .app-container 와 일치.
-       fixed 요소는 margin: auto 가 안 먹어 left:50% + translateX(-50%) 패턴 사용. */
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
 
-    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
-    padding-bottom: var(--space-2);
+    /* safe-area-top 만큼 위에서 띄움. 그 위는 검정 배경. */
+    margin-top: env(safe-area-inset-top);
+    height: 32px;
+
+    display: flex;
+    /* 세그먼트는 flex-basis 로 비율 차지. JS 가 채워줌. */
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+
+    cursor: pointer;
+    z-index: 10;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* 데스크탑에선 hover, 모바일에선 touchstart 로 툴팁. 핸들러는 JS. */
+}
+.faction-bar:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: -2px;
+}
+
+.faction-bar__segment {
+    height: 100%;
+    /* 5초 폴링 사이 부드럽게 비율 변화 — 페인트 즉시 갱신은 아니지만 시각 흐름이 자연스러움. */
+    transition: flex-basis 0.4s ease-out;
+}
+
+/* ── 하단 상태 바 ─────────────────────────────────────────────── */
+/*
+ * 미니바를 상단 막대로 대체했기 때문에 "내 진영"/"쿨다운" 표시 자리가 여기.
+ * 좌측: 내 진영 색점+이름, 우측: 쿨다운.
+ */
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+
+    padding-top: var(--space-2);
+    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
     padding-left: calc(var(--space-3) + env(safe-area-inset-left));
     padding-right: calc(var(--space-3) + env(safe-area-inset-right));
 
     background: rgba(10, 10, 10, 0.78);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--border-default);
+    border-top: 1px solid var(--border-default);
 
     display: flex;
     justify-content: space-between;
@@ -54,49 +95,80 @@ body {
     font-size: var(--text-xs);
     z-index: 10;
 }
-
-.minibar__left {
+/* status-bar__left 는 button — 탭하면 마이페이지 모달. 시각은 텍스트처럼 유지. */
+.status-bar__left {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    flex-shrink: 0;
+    /* button reset */
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
 }
-
-.minibar__right {
+.status-bar__left:hover,
+.status-bar__left:focus-visible {
+    background: var(--bg-elevated);
+    outline: none;
+}
+.status-bar__left:active {
+    transform: translateY(1px);
+}
+.status-bar__right {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
-/* 진영 색 점 — 12x12 정사각형 (둥글지 않음, 픽셀 미학) */
+/* ── 중앙 ticker ─────────────────────────────────────────────── */
+/*
+ * 가운데에 메시지가 3초마다 회전. 슬라이드업 애니메이션.
+ * overflow:hidden 으로 위/아래 잘리는 영역 안 보이게 함.
+ */
+.status-bar__ticker {
+    flex: 1 1 auto;
+    min-width: 0;            /* flex 아이템이 content 보다 작아질 수 있도록 */
+    overflow: hidden;
+    height: 1.4em;
+    margin: 0 var(--space-3);
+    text-align: center;
+    position: relative;
+}
+.status-bar__ticker-text {
+    display: inline-block;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    line-height: 1.4em;
+    white-space: nowrap;
+}
+.status-bar__ticker-text.is-leaving {
+    animation: ticker-out 0.4s ease-in forwards;
+}
+.status-bar__ticker-text.is-entering {
+    animation: ticker-in 0.4s ease-out;
+}
+@keyframes ticker-out {
+    from { transform: translateY(0);     opacity: 1; }
+    to   { transform: translateY(-100%); opacity: 0; }
+}
+@keyframes ticker-in {
+    from { transform: translateY(100%);  opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* 진영 색 점 — 12x12 정사각형 (둥글지 않음, 픽셀 미학). minibar 시절과 동일. */
 .faction-color-dot {
     display: inline-block;
     width: 12px;
     height: 12px;
     background: var(--text-tertiary);
     flex-shrink: 0;
-}
-
-/* 순위 텍스트가 곧 모달 트리거 — 텍스트 룩 유지하면서 클릭 가능. */
-.minibar__rank {
-    margin-left: var(--space-2);
-    color: var(--text-secondary);
-    /* button 기본 스타일 리셋 */
-    background: none;
-    border: none;
-    padding: 2px 6px;
-    cursor: pointer;
-    font: inherit;
-    letter-spacing: inherit;
-    border-radius: var(--radius-sm);
-    transition: var(--transition-fast);
-}
-.minibar__rank:hover,
-.minibar__rank:focus-visible {
-    color: var(--text-primary);
-    background: var(--bg-elevated);
-    outline: none;
-}
-.minibar__rank:active {
-    transform: translateY(1px);
 }
 
 .cooldown-timer {
@@ -125,13 +197,13 @@ body {
     max-width: 480px;
 
     /*
-     * Padding — wrapper 가 minibar/모서리와 시각적으로 분리.
-     *  top:    minibar(약 30px) + safe-area-top + 여유
-     *  bottom: safe-area-bottom + 여유 (FAB 없음, coord-bar 는 선택 시에만 잠깐)
+     * Padding — wrapper 가 상단 faction-bar / 하단 status-bar 와 시각적으로 분리.
+     *  top:    safe-area-top + faction-bar(32px) + 여유(12px)
+     *  bottom: safe-area-bottom + status-bar(~32px) + 여유(12px)
      *  좌우:   wrapper 의 4px box-shadow 외곽 띠가 overflow:hidden 에 안 잘리도록 여백
      */
-    padding-top: calc(env(safe-area-inset-top) + 48px);
-    padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
+    padding-top: calc(env(safe-area-inset-top) + 44px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 44px);
     padding-left: 8px;
     padding-right: 8px;
     box-sizing: border-box;
@@ -148,14 +220,15 @@ body {
 
 .canvas-wrapper {
     /*
-     * 9:16 모바일 비율. canvas-stage 의 padded inner area 를 꽉 채움.
-     * width 100% + max-height 100% 조합 — 짧은 화면에선 height 가, 좁은 화면에선 width 가 한계.
-     * aspect-ratio 가 둘 중 작은 쪽에 맞춰 다른 차원을 자동 계산.
+     * 11:17 비율 — 11×17 = 187셀. 모든 폰에서 한 눈에 들어오는 사양 (2026-05-19).
+     * - 작은 폰(360w): 344w / 11 = 31.3px 셀 → 17행 × 31.3 = 532px (552 inner 안에)
+     * - 중간 폰(390w): 374w / 11 = 34.0px 셀 → 17행 × 34.0 = 578px
+     * panzoom 제거됐으므로 줌/팬 없음, max-height: 100% 로 충분.
      */
     width: 100%;
     max-width: 480px;
     max-height: 100%;
-    aspect-ratio: 4 / 7;
+    aspect-ratio: 11 / 17;
     background: var(--white-canvas);
     /* 가장자리 강조 — 1px border 안쪽, 4px 외곽 띠로 "별개 박스" 시각화.
        design.md 의 4px 그리드 / 진영색 라인 패턴과 일관. */
@@ -181,13 +254,13 @@ body {
 /*
  * 사용자가 선택한 1칸을 캔버스 위에서 강조.
  * wrapper 안에서 셀 1개 크기 = (100% / GRID_WIDTH) × (100% / GRID_HEIGHT).
- * 12x21 그리드 → 8.333% × 4.762%. JS 의 GRID_WIDTH/HEIGHT 와 동기화 필요.
+ * 11x17 그리드 → 9.091% × 5.882%. JS 의 GRID_WIDTH/HEIGHT 와 동기화 필요.
  * pointer-events: none — 클릭이 캔버스로 통과되도록.
  */
 .pixel-cursor {
     position: absolute;
-    width: calc(100% / 12);
-    height: calc(100% / 21);
+    width: calc(100% / 11);
+    height: calc(100% / 17);
     /* 검은 외곽 + 흰색 안쪽 — 어느 진영색 위에서도 잘 보이는 대비 */
     outline: 2px solid var(--bg-base);
     box-shadow: inset 0 0 0 1px var(--text-primary);
@@ -215,10 +288,13 @@ body {
     position: fixed;
     left: 0;
     right: 0;
-    /* FAB 위쪽으로 살짝 띄움 */
-    bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+    /* status-bar(약 32px+safe-area) 위로 띄움 — 둘이 안 겹치게 */
+    bottom: calc(env(safe-area-inset-bottom) + 40px);
     margin: 0 auto;
     max-width: 480px;
+    /* 안내 영역은 클릭 가로채지 않음 — 캔버스 아래쪽 셀이 가려져도 탭 통과.
+       (cancel X 버튼만 pointer-events: auto 로 따로 활성화) */
+    pointer-events: none;
 
     padding: var(--space-3) var(--space-4);
     background: rgba(20, 20, 20, 0.92);
@@ -273,6 +349,8 @@ body {
     color: var(--text-secondary);
     cursor: pointer;
     border-radius: var(--radius-sm);
+    /* 부모(coord-bar) 가 pointer-events: none 이지만 X 버튼은 클릭 받아야 함 */
+    pointer-events: auto;
 }
 .coord-bar__cancel:hover {
     color: var(--text-primary);
@@ -281,6 +359,222 @@ body {
 .coord-bar__cancel svg {
     width: 14px;
     height: 14px;
+}
+
+/* ── 첫 진입 온보딩 (5장 슬라이드) ────────────────────────────── */
+/*
+ * 풀스크린 오버레이. 가로 스와이프 + 도트 + 건너뛰기 + 풀폭 CTA.
+ * 이미지 슬롯 280×280 정사각형 (image-rendering: pixelated 로 픽셀아트 또렷).
+ * 슬라이드 전환: .onboarding__slides 에 translateX(-100% * index) + transition.
+ */
+.onboarding {
+    position: fixed;
+    inset: 0;
+    z-index: 100;   /* 모든 모달 위 (modal-overlay z-index 50 보다 위) */
+    background: var(--bg-base);
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    /* 하단 여백 32px 추가 — 도트 + CTA 가 너무 바닥에 붙지 않게 위로 끌어올림 */
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-8));
+    overflow: hidden;
+}
+.onboarding.hidden {
+    display: none;
+}
+
+/* 가로 슬라이드 컨테이너 */
+.onboarding__viewport {
+    flex: 1 1 auto;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+.onboarding__slides {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+
+.onboarding__slide {
+    flex: 0 0 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6) var(--space-4);
+    text-align: center;
+}
+
+/* 이미지 슬롯 — 사용자가 /images/tutorial-N.png 넣으면 표시 */
+.onboarding__image {
+    width: 100%;
+    max-width: 280px;
+    aspect-ratio: 1 / 1;
+    /* 그림 ↔ 제목 간격. .onboarding__title 의 margin-bottom 과 동일하게 유지. */
+    margin-bottom: var(--space-6);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    /* 이미지 없을 때 fallback 박스 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.onboarding__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* 픽셀 아트 그대로 또렷 — 사용자가 저해상도 PNG 넣어도 깨지지 않음 */
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+.onboarding__title {
+    /* font-pixel 의도적으로 안 씀 — monospace fallback이 한글 자간을 넓게 만들고,
+       숫자/!만 픽셀로 렌더돼 한글과 일관성 깨짐. Pretendard 기본으로 깔끔하게. */
+    color: var(--text-primary);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    /* 제목 ↔ 본문 간격. .onboarding__image 의 margin-bottom 과 동일. */
+    margin: 0 0 var(--space-6) 0;
+}
+
+.onboarding__body {
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    margin: 0;
+    max-width: 320px;
+}
+
+/* 도트 인디케이터 */
+.onboarding__dots {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+}
+.onboarding__dot {
+    width: 8px;
+    height: 8px;
+    background: var(--border-default);
+    border-radius: 50%;
+    transition: background-color 0.2s, transform 0.2s;
+    /* button reset */
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    /* 터치 영역 확보 — 시각은 8px 이지만 손가락 잡힘은 24px 정사각형 */
+    position: relative;
+}
+.onboarding__dot::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+}
+.onboarding__dot.is-active {
+    background: var(--text-primary);
+    transform: scale(1.4);
+}
+.onboarding__dot:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+}
+
+/* 풀폭 CTA */
+.onboarding__cta {
+    margin: var(--space-3) var(--space-4) var(--space-4) var(--space-4);
+}
+
+/* 마이페이지 제목 "나의 픽셀" — 픽셀 폰트 monospace fallback 이 한글 사이 space 를
+   em 폭으로 잡아 어색하게 넓어짐. word-spacing 으로 그 space 만 좁힘
+   (letter-spacing 과 달리 글자끼리는 안 붙음). */
+#paints-title {
+    word-spacing: -0.6em;
+}
+
+/* ── 마이페이지 (나의 픽셀) 모달 ─────────────────────────────── */
+
+.paints-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--faction-color, var(--border-default));
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-3);
+}
+.paints-summary__faction {
+    color: var(--text-primary);
+    font-size: var(--text-base);
+}
+.paints-summary__count {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+.paints-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.paint-item {
+    display: grid;
+    grid-template-columns: 20px 1fr auto;
+    gap: var(--space-3);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+}
+.paint-item__status {
+    text-align: center;
+    font-weight: var(--weight-semibold);
+}
+.paint-item__status.is-alive {
+    color: var(--status-success);
+}
+.paint-item__status.is-dead {
+    color: var(--text-tertiary);
+}
+.paint-item__coord {
+    font-family: var(--font-pixel);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    letter-spacing: 0.04em;
+}
+.paint-item__time {
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+    letter-spacing: 0.02em;
+}
+
+.paints-empty {
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: var(--space-6);
+    font-size: var(--text-sm);
+}
+
+.paints-meta {
+    margin-top: var(--space-3);
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+    text-align: center;
 }
 
 /* ── 전체 순위 모달의 통계 리스트 ─────────────────────────────── */

@@ -33,11 +33,11 @@ function renderFactions(factions) {
             const depts = f.departments.map((d) => d.name).join(' · ');
             return `
                 <article class="faction-card" style="--faction-color: ${f.colorHex}">
-                    <span class="faction-card__dot"></span>
-                    <div class="faction-card__body">
+                    <header class="faction-card__head">
+                        <span class="faction-card__dot"></span>
                         <span class="faction-card__name">${f.name}</span>
-                        <span class="faction-card__departments">${depts}</span>
-                    </div>
+                    </header>
+                    <span class="faction-card__departments">${depts}</span>
                 </article>
             `;
         })

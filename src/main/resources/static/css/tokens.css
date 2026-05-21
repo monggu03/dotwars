@@ -24,12 +24,12 @@
     /* ── 캔버스 (절대 변경 X) ──────────────────────────────────────── */
     --white-canvas: #FFFFFF;
 
-    /* ── 진영 색 (절대 변경 X, 항상 100% 채도) ──────────────────────── */
-    --faction-humanities: #FF7F0E;   /* 인문진영 — 주황 */
-    --faction-social: #D62728;       /* 사회진영 — 빨강 */
-    --faction-natural: #2CA02C;      /* 자연진영 — 초록 */
-    --faction-engineering: #1F77B4;  /* 공학진영 — 파랑 */
-    --faction-arts: #9467BD;         /* 예술진영 — 보라 */
+    /* ── 진영 색 (Game Vibrant 2026-05-19, 색조 동일·명도/채도만 ↑) ────── */
+    --faction-humanities: #FFA040;   /* 인문진영 — 주황 (L 53→63) */
+    --faction-social: #F04545;       /* 사회진영 — 빨강 (L 50→61, S↑) */
+    --faction-natural: #43D043;      /* 자연진영 — 초록 (L 40→54, S↑) */
+    --faction-engineering: #3DA8DE;  /* 공학진영 — 파랑 (L 42→56) */
+    --faction-arts: #B08AE0;         /* 예술진영 — 보라 (L 57→71, S↑) */
 
     /* ── 상태 색 ─────────────────────────────────────────────────── */
     --status-success: #10B981;       /* 픽셀 칠하기 성공 */

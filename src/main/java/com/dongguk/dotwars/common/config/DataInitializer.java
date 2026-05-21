@@ -107,11 +107,12 @@ public class DataInitializer implements ApplicationRunner {
     private Map<String, Faction> seedFactions() {
         List<Faction> factions = List.of(
                 // displayOrder 는 화면에 나열되는 순서. 인문→사회→자연→공학→예술 순.
-                Faction.builder().name("인문진영").colorHex("#FF7F0E").displayOrder(1).build(),
-                Faction.builder().name("사회진영").colorHex("#D62728").displayOrder(2).build(),
-                Faction.builder().name("자연진영").colorHex("#2CA02C").displayOrder(3).build(),
-                Faction.builder().name("공학진영").colorHex("#1F77B4").displayOrder(4).build(),
-                Faction.builder().name("예술진영").colorHex("#9467BD").displayOrder(5).build()
+                // 2026-05-19: Game Vibrant 팔레트 — HSL 명도+15, 채도 보강. 색조(hue) 는 동일.
+                Faction.builder().name("인문진영").colorHex("#FFA040").displayOrder(1).build(),
+                Faction.builder().name("사회진영").colorHex("#F04545").displayOrder(2).build(),
+                Faction.builder().name("자연진영").colorHex("#43D043").displayOrder(3).build(),
+                Faction.builder().name("공학진영").colorHex("#3DA8DE").displayOrder(4).build(),
+                Faction.builder().name("예술진영").colorHex("#B08AE0").displayOrder(5).build()
         );
         factionRepository.saveAll(factions);
 
@@ -168,9 +169,9 @@ public class DataInitializer implements ApplicationRunner {
 
         Game game = Game.builder()
                 .name("2026 동국대 축제 픽셀 점령전")
-                .canvasWidth(12)             // application.yml 의 game.canvas.width 와 동일하게 유지 (4:7 모바일 비율)
-                .canvasHeight(21)
-                .cooldownSeconds(300)        // 5분 — application.yml 의 game.cooldown-seconds 와 동일
+                .canvasWidth(11)             // application.yml 의 game.canvas.width 와 동일하게 유지 (11×17 = 187셀)
+                .canvasHeight(17)
+                .cooldownSeconds(5)          // 5초 — application.yml 의 game.cooldown-seconds 와 동일
                 .startsAt(startsAt)
                 .endsAt(endsAt)
                 .status(GameStatus.SCHEDULED)

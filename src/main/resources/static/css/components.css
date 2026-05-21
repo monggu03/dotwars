@@ -32,9 +32,6 @@
     color: var(--bg-base);
     border: none;
 }
-.btn-primary:hover:not(:disabled) {
-    background: var(--text-secondary);
-}
 .btn-primary:active:not(:disabled) {
     transform: translateY(1px);
 }
@@ -49,9 +46,6 @@
     color: var(--text-primary);
     border: 1px solid var(--border-default);
 }
-.btn-secondary:hover:not(:disabled) {
-    border-color: var(--border-strong);
-}
 .btn-secondary:active:not(:disabled) {
     transform: translateY(1px);
 }
@@ -63,12 +57,25 @@
     border: none;
     font-weight: var(--weight-semibold);
 }
-.btn-kakao:hover:not(:disabled) {
-    /* 카카오 가이드: 색 변경 금지. 살짝 어둡게만. */
-    filter: brightness(0.95);
-}
 .btn-kakao:active:not(:disabled) {
     transform: translateY(1px);
+}
+
+/*
+ * hover 효과는 마우스 기기에서만 — 터치 기기는 탭 후 :hover 가 끈적하게 남음 (sticky hover).
+ * 단, 카톡 등 일부 인앱브라우저가 hover:hover 를 잘못 보고해 @media 만으론 안 막힘.
+ * → btn-primary(흰→회색)는 고착 시 "비활성" 처럼 보여 hover 변색 자체를 제거.
+ *   누름 피드백은 :active(누르는 순간만, 자동 해제)로 충분.
+ * → secondary/kakao 는 변화가 미묘(보더/밝기)해서 hover 유지하되 마우스 기기 한정.
+ */
+@media (hover: hover) {
+    .btn-secondary:hover:not(:disabled) {
+        border-color: var(--border-strong);
+    }
+    .btn-kakao:hover:not(:disabled) {
+        /* 카카오 가이드: 색 변경 금지. 살짝 어둡게만. */
+        filter: brightness(0.95);
+    }
 }
 
 /* full-width — 모바일 풀폭 */

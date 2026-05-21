@@ -76,3 +76,12 @@
     line-height: 1.6;
     margin: 0;
 }
+
+/* 새벽 휴장 멘트 앞 픽셀 초승달 */
+.waiting-moon {
+    width: 11px;
+    height: 11px;
+    margin-right: var(--space-1);
+    vertical-align: -0.1em;
+    color: #FFD873;   /* 따뜻한 달 노랑 */
+}

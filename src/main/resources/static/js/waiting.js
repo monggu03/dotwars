@@ -83,9 +83,10 @@ async function refreshStatus() {
         els.label.textContent = '휴식 시간';
         els.countdown.textContent = '';
     }
-    // 새벽(00~08시) 야간 휴장이면 숙면 멘트, 그 외엔 자동 이동 안내.
-    els.meta.textContent = isNightHours()
-        ? '새벽에는 게임보다 숙면을 취하세요!'
+    // 새벽(00~08시) 야간 휴장이면 픽셀 달 + 숙면 멘트, 그 외엔 자동 이동 안내.
+    // innerHTML 이지만 전부 정적 문자열이라 XSS 위험 없음.
+    els.meta.innerHTML = isNightHours()
+        ? `${MOON_SVG}새벽에는 게임보다 숙면을 취하세요!`
         : '시작 시각이 되면 자동으로 게임 화면으로 이동합니다.';
     tick();
 }
@@ -96,6 +97,20 @@ function isNightHours() {
     const h = new Date().getHours();
     return h >= 0 && h < 8;
 }
+
+// 픽셀 초승달 (8×8, 폭 3의 호). game-end 의 픽셀 하트와 같은 crispEdges 방식.
+const MOON_SVG =
+    '<svg class="waiting-moon" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">'
+    + '<g fill="currentColor">'
+    + '<rect x="2" y="0" width="3" height="1"/>'
+    + '<rect x="1" y="1" width="3" height="1"/>'
+    + '<rect x="0" y="2" width="3" height="1"/>'
+    + '<rect x="0" y="3" width="3" height="1"/>'
+    + '<rect x="0" y="4" width="3" height="1"/>'
+    + '<rect x="0" y="5" width="3" height="1"/>'
+    + '<rect x="1" y="6" width="3" height="1"/>'
+    + '<rect x="2" y="7" width="3" height="1"/>'
+    + '</g></svg>';
 
 function tick() {
     if (!nextStartsAt) return;

@@ -41,6 +41,15 @@
     font-size: var(--text-sm);
 }
 
+/* 픽셀 하트 — rect 로 그린 8-bit 모양. currentColor 대신 빨강 고정. */
+.end-heart {
+    width: 14px;
+    height: 12px;
+    margin-left: var(--space-1);
+    vertical-align: -0.12em;
+    color: var(--faction-social);   /* #F04545 빨강 */
+}
+
 /* ── 최종 캔버스 ────────────────────────────────────────────── */
 
 .end-canvas-wrap {
@@ -54,7 +63,7 @@
 #end-canvas {
     width: 100%;
     max-width: 360px;
-    aspect-ratio: 4 / 7;
+    aspect-ratio: 11 / 17;
     background: var(--white-canvas);
     border: 1px solid var(--border-strong);
     /* 픽셀 또렷하게 유지 — 줌 시에도 안티얼라이즈 X */
@@ -94,7 +103,18 @@
     font-size: var(--text-pixel-md);
     color: var(--faction-color, var(--text-primary));
     letter-spacing: 0.04em;
+    margin-bottom: var(--space-2);
+}
+
+/* 우승 진영 소속 단과대 목록 — 진영명 바로 아래 */
+.winner-card__departments {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.5;
     margin-bottom: var(--space-3);
+}
+.winner-card__departments:empty {
+    display: none;
 }
 
 .winner-card__stat {
@@ -125,7 +145,8 @@
 
 .my-card__row {
     display: flex;
-    align-items: baseline;
+    /* baseline 은 진영명(기본폰트)/순위(픽셀폰트) 의 baseline 이 달라 어긋남 → center 로 높이 맞춤 */
+    align-items: center;
     justify-content: space-between;
 }
 
@@ -196,13 +217,20 @@
 .end-ranking__main {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
     min-width: 0;
 }
 
 .end-ranking__name {
     color: var(--text-primary);
     font-size: var(--text-base);
+}
+
+/* 진영별 소속 단과대 — 진영명 아래 작은 보조 텍스트 */
+.end-ranking__departments {
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+    line-height: 1.4;
 }
 
 /* 비율 바 — 진영색으로 채워지는 가로 바 */

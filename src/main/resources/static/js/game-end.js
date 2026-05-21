@@ -14,21 +14,22 @@
 
 import { apiGet, ApiError } from './api.js';
 
-// 4:7 모바일 비율 — game.js 와 동일. application.yml game.canvas.* 와 일치.
-const GRID_WIDTH = 12;
-const GRID_HEIGHT = 21;
+// 11:17 비율 — game.js 와 동일. application.yml game.canvas.* 와 일치.
+const GRID_WIDTH = 11;
+const GRID_HEIGHT = 17;
 const CELL_PX = 30;
 const CANVAS_W = GRID_WIDTH * CELL_PX;
 const CANVAS_H = GRID_HEIGHT * CELL_PX;
-const GRID_STROKE = 'rgba(0, 0, 0, 0.10)';
+const GRID_STROKE = 'rgba(0, 0, 0, 0.35)';   // game.js 와 동일
 
+// Game Vibrant 팔레트 (2026-05-19) — DB factions.color_hex / tokens.css 와 반드시 동기화.
 const FACTION_COLORS = {
     0: '#FFFFFF',
-    1: '#FF7F0E',
-    2: '#D62728',
-    3: '#2CA02C',
-    4: '#1F77B4',
-    5: '#9467BD',
+    1: '#FFA040',   // 인문 주황
+    2: '#F04545',   // 사회 빨강
+    3: '#43D043',   // 자연 초록
+    4: '#3DA8DE',   // 공학 파랑
+    5: '#B08AE0',   // 예술 보라
 };
 
 const $ = (id) => document.getElementById(id);
@@ -37,6 +38,7 @@ const els = {
     caption: $('canvas-caption'),
     winnerCard: $('winner'),
     winnerName: $('winner-name'),
+    winnerDepartments: $('winner-departments'),
     winnerPct: $('winner-pct'),
     winnerPixels: $('winner-pixels'),
     myCard: $('my-card'),
@@ -51,17 +53,19 @@ init();
 
 async function init() {
     // 본인 정보는 로그인 안 했어도 결과 화면 열람 가능 → 실패 OK
-    const [stats, canvas, me] = await Promise.all([
+    // departments: 우승 진영의 소속 단과대 목록 표시용
+    const [stats, canvas, me, departments] = await Promise.all([
         apiGet('/api/stats/factions').catch(() => null),
         apiGet('/api/game/canvas').catch(() => null),
         apiGet('/api/users/me').catch((e) => {
             if (e instanceof ApiError && e.status === 401) return null;
             throw e;
         }),
+        apiGet('/api/departments').catch(() => null),
     ]);
 
     if (canvas) drawCanvas(canvas);
-    if (stats) renderStats(stats, me?.faction?.id);
+    if (stats) renderStats(stats, me?.faction?.id, departments);
     if (me?.faction) renderMyFaction(me, stats);
 
     bindEvents();
@@ -83,7 +87,8 @@ function drawCanvas(data) {
             const fid = data.pixels[y][x];
             if (fid > 0) {
                 ctx.fillStyle = FACTION_COLORS[fid] || FACTION_COLORS[0];
-                ctx.fillRect(x * CELL_PX, y * CELL_PX, CELL_PX, CELL_PX);
+                // game.js fillCell 과 동일 — 좌상단 1px 만 비워 격자 보존, 셀 사이 여백 없음.
+                ctx.fillRect(x * CELL_PX + 1, y * CELL_PX + 1, CELL_PX - 1, CELL_PX - 1);
             }
         }
     }
@@ -110,7 +115,27 @@ function drawCanvas(data) {
 
 // ── 통계 + 순위 + 비율 바 ─────────────────────────────────────
 
-function renderStats(data, myFactionId) {
+/** game.js ordinal() 과 동일 — 픽셀 폰트와 호환되는 영어 ordinal. */
+function ordinal(n) {
+    if (n === 1) return '1st';
+    if (n === 2) return '2nd';
+    if (n === 3) return '3rd';
+    return `${n}th`;
+}
+
+/**
+ * 단과대 목록을 " · " 로 연결. 4개 이상이면 가운데서 <br> 줄바꿈 (한 줄이 너무 길어지는 것 방지).
+ * 현재 4개인 진영은 사회진영뿐 → 2+2 로 나뉨. 반환값은 HTML (innerHTML 으로 삽입).
+ */
+function formatDepartments(names) {
+    if (names.length >= 4) {
+        const mid = Math.ceil(names.length / 2);
+        return names.slice(0, mid).join(' · ') + '<br>' + names.slice(mid).join(' · ');
+    }
+    return names.join(' · ');
+}
+
+function renderStats(data, myFactionId, departments) {
     const ranked = data.factions;   // rank 순 정렬됨
     if (ranked.length === 0) return;
 
@@ -121,16 +146,35 @@ function renderStats(data, myFactionId) {
     els.winnerPct.textContent = `${winner.percentage.toFixed(1)}%`;
     els.winnerPixels.textContent = `${winner.pixelCount.toLocaleString()}픽셀`;
 
+    // 우승 진영 소속 단과대 — /api/departments 에서 winner.id 매칭
+    if (departments?.factions) {
+        const wf = departments.factions.find((f) => f.id === winner.id);
+        if (wf?.departments?.length) {
+            els.winnerDepartments.innerHTML = formatDepartments(wf.departments.map((d) => d.name));
+        }
+    }
+
+    // 진영별 → 소속 단과대 lookup (id → "불교대학 · 문과대학 · ...")
+    const deptByFaction = {};
+    if (departments?.factions) {
+        for (const wf of departments.factions) {
+            deptByFaction[wf.id] = formatDepartments((wf.departments ?? []).map((d) => d.name));
+        }
+    }
+
     // 진영별 순위 + 비율 바
     els.ranking.innerHTML = ranked.map((f) => {
         const mine = myFactionId && f.id === myFactionId ? ' is-mine' : '';
+        const depts = deptByFaction[f.id] || '';
+        const deptLine = depts ? `<span class="end-ranking__departments">${depts}</span>` : '';
         return `
             <li class="end-ranking__row${mine}"
                 style="--row-color: ${f.colorHex}; --bar-pct: ${f.percentage}%;">
-                <span class="end-ranking__rank">${f.rank}위</span>
+                <span class="end-ranking__rank">${ordinal(f.rank)}</span>
                 <span class="end-ranking__dot"></span>
                 <div class="end-ranking__main">
                     <span class="end-ranking__name">${f.name}</span>
+                    ${deptLine}
                     <span class="end-ranking__bar"></span>
                 </div>
                 <span class="end-ranking__pct">${f.percentage.toFixed(1)}%</span>
@@ -148,22 +192,65 @@ function renderMyFaction(me, stats) {
 
     els.myCard.style.setProperty('--faction-color', me.faction.colorHex);
     els.myFactionName.textContent = me.faction.name;
-    els.myRank.textContent = `${myStat.rank}위 · ${myStat.percentage.toFixed(1)}%`;
+    els.myRank.textContent = `${ordinal(myStat.rank)} · ${myStat.percentage.toFixed(1)}%`;
     els.myCard.classList.remove('hidden');
 }
 
 // ── 액션 ─────────────────────────────────────────────────────
 
 function bindEvents() {
-    els.downloadBtn?.addEventListener('click', () => {
-        // canvas → PNG dataURL → <a download> 트릭으로 저장
-        const link = document.createElement('a');
-        link.download = `dotwars-final-${Date.now()}.png`;
-        link.href = els.canvas.toDataURL('image/png');
-        link.click();
-    });
+    els.downloadBtn?.addEventListener('click', downloadResultImage);
 
     els.backHome?.addEventListener('click', () => {
         location.replace('/');
     });
+}
+
+/**
+ * 결과 화면 전체를 PNG 로 저장.
+ *  - html2canvas 로 .end-screen 전체(캔버스 + 우승카드 + 순위 등) 캡쳐
+ *  - 캡쳐 동안 액션 버튼은 잠깐 숨김 (저장 이미지에 버튼 안 나오게)
+ *  - scale: 2 로 retina 화질
+ */
+async function downloadResultImage() {
+    const target = document.querySelector('.end-screen');
+    const actions = document.querySelector('.end-actions');
+    if (!target || typeof window.html2canvas !== 'function') {
+        // html2canvas 로드 실패 시 — 캔버스만이라도 저장 (폴백)
+        const link = document.createElement('a');
+        link.download = `dotwars-final-${Date.now()}.png`;
+        link.href = els.canvas.toDataURL('image/png');
+        link.click();
+        return;
+    }
+
+    const prevLabel = els.downloadBtn.textContent;
+    els.downloadBtn.disabled = true;
+    els.downloadBtn.textContent = '이미지 생성 중…';
+    if (actions) actions.style.visibility = 'hidden';
+
+    try {
+        const bg = getComputedStyle(document.body).backgroundColor || '#0A0A0A';
+        const canvas = await window.html2canvas(target, {
+            backgroundColor: bg,
+            scale: 2,                 // 고해상도
+            useCORS: true,
+            logging: false,
+        });
+        const link = document.createElement('a');
+        link.download = `dotwars-result-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    } catch (e) {
+        console.error('[download] 결과 이미지 생성 실패', e);
+        // 폴백 — 캔버스만
+        const link = document.createElement('a');
+        link.download = `dotwars-final-${Date.now()}.png`;
+        link.href = els.canvas.toDataURL('image/png');
+        link.click();
+    } finally {
+        if (actions) actions.style.visibility = '';
+        els.downloadBtn.disabled = false;
+        els.downloadBtn.textContent = prevLabel;
+    }
 }

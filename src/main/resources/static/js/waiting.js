@@ -107,10 +107,12 @@ async function refreshStatus() {
 // 누적 인원" 으로 집계 — 친구가 로그인할 때마다 숫자가 올라가고 빠지지 않음.
 // 진영별로도 나눠 보여 줘 "우리 과 다 모여!" 식 과 대항전 동기 → 친구 초대 유도.
 //
-// 표시용 기준값(시작 전 휑함 방지): 총원 +25, 진영당 +5.
-// 진영 5개 × 5 = 25 라 두 기준이 일치 → 진영별 합 = 총원 표시값 (숫자 안 깨짐).
+// 표시용 기준값(시작 전 휑함 방지). 진영별 초기 가중치는 사용자 지정(합 25):
+//   인문 4 · 사회 7 · 자연 3 · 공학 11 · 예술 0  → key = faction id (1~5).
+// 합이 WAITING_BASE(25) 와 같아 진영별 합 = 총원 표시값 (숫자 안 깨짐).
+// 여기에 실제 DB 가입자 수가 진영별로 더해진다.
 const WAITING_BASE = 25;
-const FACTION_BASE = 5;
+const FACTION_BASE = { 1: 4, 2: 7, 3: 3, 4: 11, 5: 0 };
 
 async function pollWaiting() {
     try {
@@ -124,7 +126,7 @@ async function pollWaiting() {
                 <span class="wf-chip">
                     <span class="wf-dot" style="background:${f.colorHex}"></span>
                     <span class="wf-name">${shortFaction(f.name)}</span>
-                    <span class="wf-count">${FACTION_BASE + f.count}</span>
+                    <span class="wf-count">${(FACTION_BASE[f.id] ?? 0) + f.count}</span>
                 </span>`).join('');
         }
     } catch {

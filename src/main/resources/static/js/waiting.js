@@ -27,6 +27,7 @@ const els = {
     factionName: $('my-faction-name'),
     label: $('waiting-label'),
     countdown: $('waiting-countdown'),
+    hint: $('waiting-hint'),
     meta: $('waiting-meta'),
     inviteFriends: $('invite-friends'),
 };
@@ -88,7 +89,39 @@ async function refreshStatus() {
     els.meta.innerHTML = isNightHours()
         ? `새벽에는 숙면을 취하세요 ${MOON_SVG}`
         : '시작 시각이 되면 자동으로 게임 화면으로 이동합니다.';
+    pollWaiting();   // 카운트다운 밑 "현재 N명 대기 중!" 갱신 (핑 겸 조회)
     tick();
+}
+
+// ── 대기 인원 presence ────────────────────────────────────────────────
+// 대기화면은 WebSocket 을 안 쓰므로(시작 전 핸드셰이크 비용 회피) 별도 핑으로 집계.
+// 방문자 고유 id 를 localStorage 에 보관 → 같은 사람 여러 탭/새로고침은 1명으로.
+let visitorId;
+function getVisitorId() {
+    if (visitorId) return visitorId;
+    try {
+        let id = localStorage.getItem('dotwars_visitor_id');
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem('dotwars_visitor_id', id);
+        }
+        visitorId = id;
+    } catch {
+        // private 모드 등 localStorage 차단 시 — 휘발성 id (이번 로드 한정)
+        visitorId = crypto.randomUUID();
+    }
+    return visitorId;
+}
+
+async function pollWaiting() {
+    try {
+        const res = await apiGet(`/api/stats/waiting?v=${encodeURIComponent(getVisitorId())}`);
+        if (res && typeof res.waiting === 'number') {
+            els.hint.textContent = `현재 ${res.waiting}명 대기 중!`;
+        }
+    } catch {
+        // 실패해도 기존 텍스트("남음") 유지 — 조용히 무시.
+    }
 }
 
 // 게임은 매일 08:00~24:00 운영 → 00:00~07:59 는 야간 휴장(새벽).

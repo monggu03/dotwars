@@ -84,3 +84,12 @@
     vertical-align: -0.1em;
     color: #FFD873;   /* 따뜻한 달 노랑 */
 }
+
+/* "현재 N명 대기 중!" 앞 픽셀 불꽃 */
+.waiting-fire {
+    width: 11px;
+    height: 11px;
+    margin-right: var(--space-1);
+    vertical-align: -0.1em;
+    color: #FF6A1A;   /* 화염 주황 */
+}

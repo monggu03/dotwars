@@ -113,16 +113,35 @@ function getVisitorId() {
     return visitorId;
 }
 
+// 표시용 기준 인원 — 시작 전 너무 휑해 보이지 않게 25 부터 시작(+ 실제 presence).
+// 실제 집계값(res.waiting)은 API/Redis 에 그대로 정확히 남고, 화면 표시만 부풀린다.
+const WAITING_BASE = 25;
+
 async function pollWaiting() {
     try {
         const res = await apiGet(`/api/stats/waiting?v=${encodeURIComponent(getVisitorId())}`);
         if (res && typeof res.waiting === 'number') {
-            els.hint.textContent = `현재 ${res.waiting}명 대기 중!`;
+            const shown = WAITING_BASE + res.waiting;
+            els.hint.innerHTML = `${FIRE_SVG}현재 ${shown}명 대기 중!`;
         }
     } catch {
         // 실패해도 기존 텍스트("남음") 유지 — 조용히 무시.
     }
 }
+
+// 픽셀 불꽃 (8×8). 달과 동일한 crispEdges 도트 방식. 위로 좁고 아래로 둥근 화염.
+const FIRE_SVG =
+    '<svg class="waiting-fire" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">'
+    + '<g fill="currentColor">'
+    + '<rect x="4" y="0" width="1" height="1"/>'
+    + '<rect x="3" y="1" width="2" height="1"/>'
+    + '<rect x="2" y="2" width="3" height="1"/>'
+    + '<rect x="2" y="3" width="4" height="1"/>'
+    + '<rect x="1" y="4" width="5" height="1"/>'
+    + '<rect x="1" y="5" width="6" height="1"/>'
+    + '<rect x="1" y="6" width="6" height="1"/>'
+    + '<rect x="2" y="7" width="4" height="1"/>'
+    + '</g></svg>';
 
 // 게임은 매일 08:00~24:00 운영 → 00:00~07:59 는 야간 휴장(새벽).
 // 사용자 로컬 시각 기준 (한국 사용자는 KST = 운영 시각과 동일).

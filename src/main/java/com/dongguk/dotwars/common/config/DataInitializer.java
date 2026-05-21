@@ -163,7 +163,7 @@ public class DataInitializer implements ApplicationRunner {
      */
     private Game seedGame() {
         LocalDate today = LocalDate.now();                          // 예: 2026-05-16
-        LocalDateTime startsAt = today.atTime(16, 0);                // 2026-05-16 16:00
+        LocalDateTime startsAt = today.atTime(8, 0);                 // 08:00 — 운영 일정과 동일 (2026-05-21 16→08 연장)
         // "Day3 의 24:00" = "Day4 의 00:00" = today + 3일의 자정. plusDays(3).atStartOfDay() 가 정확.
         LocalDateTime endsAt = today.plusDays(3).atStartOfDay();     // 2026-05-19 00:00
 
@@ -180,7 +180,7 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     /**
-     * 3개 세션 (Day 1/2/3). 각 세션은 16:00 ~ 다음날 00:00 (= 당일 24:00).
+     * 3개 세션 (Day 1/2/3). 각 세션은 08:00 ~ 다음날 00:00 (= 당일 24:00).
      */
     private void seedSessions(Game game) {
         LocalDate today = LocalDate.now();
@@ -196,7 +196,7 @@ public class DataInitializer implements ApplicationRunner {
         return GameSession.builder()
                 .game(game)
                 .dayNumber(dayNumber)
-                .startsAt(dayDate.atTime(16, 0))
+                .startsAt(dayDate.atTime(8, 0))
                 .endsAt(dayDate.plusDays(1).atStartOfDay())   // 당일 24:00 == 다음 날 00:00
                 .build();
     }

@@ -2,6 +2,8 @@ package com.dongguk.dotwars.user.controller;
 
 import com.dongguk.dotwars.user.dto.SelectDepartmentRequest;
 import com.dongguk.dotwars.user.dto.UserMeResponse;
+import com.dongguk.dotwars.user.dto.UserPaintsResponse;
+import com.dongguk.dotwars.user.service.UserPaintsService;
 import com.dongguk.dotwars.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final UserPaintsService userPaintsService;
 
     /**
      * GET /api/users/me — 본인 + 단과대 + 진영 + 쿨다운.
@@ -48,5 +51,15 @@ public class UserController {
             @Valid @RequestBody SelectDepartmentRequest request
     ) {
         return userService.selectDepartment(userId, request.departmentId(), request.agreed());
+    }
+
+    /**
+     * GET /api/users/me/paints — 마이페이지 (본인 페인트 이력).
+     *
+     * 응답: 누적 칠한 횟수 + 최근 50개 (좌표 + 시각 + alive 플래그).
+     */
+    @GetMapping("/paints")
+    public UserPaintsResponse myPaints(@AuthenticationPrincipal Long userId) {
+        return userPaintsService.getMyPaints(userId);
     }
 }

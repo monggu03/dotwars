@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A0A">
+    <meta name="robots" content="noindex, nofollow">
+    <title>사령부 — dotwars admin</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/pages/admin.css">
+</head>
+<body>
+<main class="admin" id="admin" hidden>
+    <header class="admin__header">
+        <h1 class="admin__title font-pixel">DOTWARS 사령부</h1>
+        <span class="admin__updated" id="admin-updated">연결 중…</span>
+    </header>
+
+    <!-- KPI -->
+    <section class="admin__kpis">
+        <div class="kpi"><span class="kpi__label">현재 접속</span><span class="kpi__value font-pixel" id="kpi-online">—</span></div>
+        <div class="kpi"><span class="kpi__label">최대 동시 접속</span><span class="kpi__value font-pixel" id="kpi-peak">—</span></div>
+        <div class="kpi"><span class="kpi__label">총 페인트</span><span class="kpi__value font-pixel" id="kpi-paints">—</span></div>
+        <div class="kpi"><span class="kpi__label">참여자</span><span class="kpi__value font-pixel" id="kpi-participants">—</span></div>
+        <div class="kpi kpi--load"><span class="kpi__label">분당 페인트 (부하)</span><span class="kpi__value font-pixel" id="kpi-ppm">—</span></div>
+    </section>
+
+    <div class="admin__grid">
+        <!-- 진영 점유율 -->
+        <section class="admin__card">
+            <h2 class="admin__card-title">진영 점유율</h2>
+            <ul class="adm-factions" id="admin-factions"></ul>
+        </section>
+
+        <!-- 격전지 -->
+        <section class="admin__card">
+            <h2 class="admin__card-title">격전지 TOP 10</h2>
+            <ol class="adm-contested" id="admin-contested"></ol>
+        </section>
+
+        <!-- 히트맵 -->
+        <section class="admin__card">
+            <h2 class="admin__card-title">캔버스 히트맵 <span class="admin__hint">(많이 칠해진 칸일수록 밝음)</span></h2>
+            <div class="adm-heatmap" id="admin-heatmap"></div>
+        </section>
+
+        <!-- 시간대별 활동 -->
+        <section class="admin__card">
+            <h2 class="admin__card-title">시간대별 활동량</h2>
+            <div class="adm-hourly" id="admin-hourly"></div>
+        </section>
+
+        <!-- 실시간 로그 -->
+        <section class="admin__card admin__card--wide">
+            <h2 class="admin__card-title">실시간 페인트 로그</h2>
+            <ul class="adm-log" id="admin-recent"></ul>
+        </section>
+    </div>
+</main>
+
+<!-- 접근 거부 화면 -->
+<div class="admin-denied" id="admin-denied" hidden>
+    <p class="admin-denied__msg">관리자 전용 페이지입니다.</p>
+    <a class="admin-denied__home" href="/">홈으로</a>
+</div>
+
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>

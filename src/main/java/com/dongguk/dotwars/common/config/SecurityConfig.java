@@ -87,7 +87,10 @@ public class SecurityConfig {
                                 "/game-end.html",
                                 "/rules.html",
                                 "/waiting.html",
-                                "/select-department.html"
+                                "/select-department.html",
+                                // 관리자 대시보드 HTML 은 누구나 로드 가능 — 실제 데이터(/api/admin/*)는
+                                // AdminGuard 가 kakaoId 로 막으므로 셸만으론 정보 노출 없음.
+                                "/admin/dashboard.html"
                         ).permitAll()
 
                         // ── 그 외 ───────────────────────────────────────────

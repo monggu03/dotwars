@@ -86,7 +86,7 @@ async function refreshStatus() {
     // 새벽(00~08시) 야간 휴장이면 픽셀 달 + 숙면 멘트, 그 외엔 자동 이동 안내.
     // innerHTML 이지만 전부 정적 문자열이라 XSS 위험 없음.
     els.meta.innerHTML = isNightHours()
-        ? `${MOON_SVG}새벽에는 게임보다 숙면을 취하세요!`
+        ? `${MOON_SVG}새벽에는 게임보다 숙면을 취하세요`
         : '시작 시각이 되면 자동으로 게임 화면으로 이동합니다.';
     tick();
 }

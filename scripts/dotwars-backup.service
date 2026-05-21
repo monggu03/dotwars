@@ -1,0 +1,9 @@
+[Unit]
+Description=dotwars MySQL daily backup
+
+[Service]
+Type=oneshot
+User=ec2-user
+ExecStart=/bin/bash /home/ec2-user/app/scripts/backup-db.sh
+StandardOutput=append:/home/ec2-user/app/logs/backup.log
+StandardError=append:/home/ec2-user/app/logs/backup.log

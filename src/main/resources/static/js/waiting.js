@@ -28,6 +28,7 @@ const els = {
     label: $('waiting-label'),
     countdown: $('waiting-countdown'),
     hint: $('waiting-hint'),
+    factions: $('waiting-factions'),
     meta: $('waiting-meta'),
     inviteFriends: $('invite-friends'),
 };
@@ -104,22 +105,36 @@ async function refreshStatus() {
 // ── 대기 인원 ──────────────────────────────────────────────────────────
 // "지금 화면 켜둔 사람(실시간 presence)" 이 아니라 "가입(로그인+단과대 선택)한
 // 누적 인원" 으로 집계 — 친구가 로그인할 때마다 숫자가 올라가고 빠지지 않음.
-// (실시간 presence 는 모바일 백그라운드 타이머 정지 등으로 시작 전엔 거의 1명만 잡힘)
-// participants = userRepository.countByDepartmentIsNotNull() (= /api/stats/online 제공).
-
-// 표시용 기준 인원 — 시작 전 너무 휑해 보이지 않게 25 부터 시작(+ 실제 가입자 수).
+// 진영별로도 나눠 보여 줘 "우리 과 다 모여!" 식 과 대항전 동기 → 친구 초대 유도.
+//
+// 표시용 기준값(시작 전 휑함 방지): 총원 +25, 진영당 +5.
+// 진영 5개 × 5 = 25 라 두 기준이 일치 → 진영별 합 = 총원 표시값 (숫자 안 깨짐).
 const WAITING_BASE = 25;
+const FACTION_BASE = 5;
 
 async function pollWaiting() {
     try {
-        const res = await apiGet('/api/stats/online');
-        if (res && typeof res.participants === 'number') {
-            const shown = WAITING_BASE + res.participants;
-            els.hint.innerHTML = `${FIRE_SVG}현재 ${shown}명 대기 중!`;
+        const res = await apiGet('/api/stats/waiting');
+        if (!res || typeof res.total !== 'number') return;
+
+        els.hint.innerHTML = `${FIRE_SVG}현재 ${WAITING_BASE + res.total}명 대기 중!`;
+
+        if (Array.isArray(res.factions)) {
+            els.factions.innerHTML = res.factions.map((f) => `
+                <span class="wf-chip">
+                    <span class="wf-dot" style="background:${f.colorHex}"></span>
+                    <span class="wf-name">${shortFaction(f.name)}</span>
+                    <span class="wf-count">${FACTION_BASE + f.count}</span>
+                </span>`).join('');
         }
     } catch {
         // 실패해도 기존 텍스트("남음") 유지 — 조용히 무시.
     }
+}
+
+// "인문진영" → "인문" (스트립은 좁으니 접미사 제거)
+function shortFaction(name) {
+    return (name || '').replace(/진영$/, '');
 }
 
 // 픽셀 불꽃 (8×8). 달과 동일한 crispEdges 도트 방식. 위로 좁고 아래로 둥근 화염.

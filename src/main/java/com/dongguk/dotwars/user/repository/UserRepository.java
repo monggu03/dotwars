@@ -1,9 +1,12 @@
 package com.dongguk.dotwars.user.repository;
 
 import com.dongguk.dotwars.user.domain.User;
+import com.dongguk.dotwars.user.repository.projection.FactionParticipantCount;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -25,6 +28,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 단과대(=진영) 선택을 완료한 사용자 수 — 게임에 "참여한" 누적 인원 */
     long countByDepartmentIsNotNull();
+
+    /**
+     * 진영별 가입자 수 — 대기화면 "진영별 대기 인원" 스트립용.
+     * User → Department → Faction 경로로 묶어 진영 id 별 COUNT.
+     * 가입자 0명인 진영은 결과에 안 나오므로, 호출부에서 0 으로 채운다.
+     */
+    @Query("SELECT u.department.faction.id AS factionId, COUNT(u) AS cnt "
+            + "FROM User u WHERE u.department IS NOT NULL "
+            + "GROUP BY u.department.faction.id")
+    List<FactionParticipantCount> countParticipantsByFaction();
 
     /**
      * 사용자 + 단과대 + 진영을 한 쿼리로 fetch join.

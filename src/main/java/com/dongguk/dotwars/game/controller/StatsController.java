@@ -1,8 +1,10 @@
 package com.dongguk.dotwars.game.controller;
 
 import com.dongguk.dotwars.game.dto.FactionStatsResponse;
+import com.dongguk.dotwars.game.dto.WaitingStatsResponse;
 import com.dongguk.dotwars.game.repository.PixelHistoryRepository;
 import com.dongguk.dotwars.game.service.FactionStatsService;
+import com.dongguk.dotwars.game.service.WaitingStatsService;
 import com.dongguk.dotwars.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
@@ -24,6 +26,7 @@ public class StatsController {
     private final SimpUserRegistry userRegistry;
     private final UserRepository userRepository;
     private final PixelHistoryRepository pixelHistoryRepository;
+    private final WaitingStatsService waitingStatsService;
 
     @GetMapping("/factions")
     public FactionStatsResponse factions() {
@@ -45,5 +48,14 @@ public class StatsController {
                 "participants", userRepository.countByDepartmentIsNotNull(),
                 "paints", pixelHistoryRepository.count()
         );
+    }
+
+    /**
+     * 대기화면 인원 통계 — 총 가입자 + 진영별 가입자.
+     * waiting.js 가 10초마다 호출해 "현재 N명 대기 중!" + 진영별 스트립을 갱신.
+     */
+    @GetMapping("/waiting")
+    public WaitingStatsResponse waiting() {
+        return waitingStatsService.getWaitingStats();
     }
 }
